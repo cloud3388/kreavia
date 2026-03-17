@@ -18,7 +18,7 @@ const MainLayout = () => {
       <nav className="container flex items-center justify-between py-6 border-b border-light shadow-sm bg-secondary/80 backdrop-blur-md sticky top-0 z-50">
         <div className="flex items-center gap-4">
           <div className="flex items-center justify-center group cursor-pointer" onClick={() => navigate('/')}>
-            <img src={logo} alt="Kreavia Logo" className="h-[18px] w-[18px] object-contain group-hover:scale-110 transition-transform duration-500" />
+            <img src={logo} alt="Kreavia Logo" style={{ height: '18px', width: '18px', objectFit: 'contain' }} className="group-hover:scale-110 transition-transform duration-500" />
           </div>
           <Link to="/" className="font-headline text-2xl font-bold text-primary tracking-tight">Kreavia<span className="text-accent">.ai</span></Link>
         </div>
@@ -61,7 +61,7 @@ const MainLayout = () => {
       
       <footer className="p-16 border-t flex flex-col items-center justify-center gap-8 border-light bg-surface/50">
         <div className="flex flex-col items-center gap-4">
-          <img src={logo} alt="Kreavia Logo" className="h-[18px] w-[18px] object-contain opacity-80" />
+          <img src={logo} alt="Kreavia Logo" style={{ height: '18px', width: '18px', objectFit: 'contain' }} className="opacity-80" />
           <div className="font-headline text-3xl font-bold text-primary">Kreavia<span className="text-accent">.ai</span></div>
         </div>
         <p className="text-muted text-sm font-medium">Generate your full social media identity with AI intelligence.</p>
