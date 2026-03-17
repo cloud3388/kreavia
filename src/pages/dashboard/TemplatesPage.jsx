@@ -42,68 +42,85 @@ const TemplatesPage = () => {
   };
 
   const templates = [
-    { id: 1, type: 'instagram', title: 'Quote Post', image: 'https://placehold.co/400x500/0F0F0F/F5F5F5?text=QUOTE&font=playfair' },
-    { id: 2, type: 'reels', title: 'Reel Cover A', image: 'https://placehold.co/400x700/0F0F0F/C6A96B?text=COVER&font=satoshi' },
-    { id: 3, type: 'story', title: 'Story Highlight', image: 'https://placehold.co/400x700/F5F5F5/0F0F0F?text=STORY&font=inter' },
-    { id: 4, type: 'instagram', title: 'Carousel Slide 1', image: 'https://placehold.co/400x400/0F0F0F/6B7CFF?text=SLIDE_1&font=playfair' },
-    { id: 5, type: 'youtube', title: 'Thumbnail Main', image: 'https://placehold.co/600x338/C6A96B/0F0F0F?text=THUMBNAIL&font=playfair' },
-    { id: 6, type: 'reels', title: 'Reel Cover B', image: 'https://placehold.co/400x700/0F0F0F/F5F5F5?text=VLOG&font=satoshi' },
-    { id: 7, type: 'instagram', title: 'Announcement', image: 'https://placehold.co/400x400/6B7CFF/0F0F0F?text=NEW&font=playfair' },
-    { id: 8, type: 'story', title: 'Q&A Template', image: 'https://placehold.co/400x700/0F0F0F/C6A96B?text=Q%26A&font=satoshi' },
+    { id: 1, type: 'instagram', title: 'Quote Post', image: `https://placehold.co/400x500/0F0F0F/${(brandData?.colors?.accent || 'C6A96B').replace('#','')}/?text=QUOTE&font=playfair` },
+    { id: 2, type: 'reels', title: 'Reel Cover A', image: `https://placehold.co/400x700/0F0F0F/${(brandData?.colors?.accent || 'C6A96B').replace('#','')}/?text=COVER&font=satoshi` },
+    { id: 3, type: 'story', title: 'Story Highlight', image: `https://placehold.co/400x700/${(brandData?.colors?.secondary || 'F5F5F5').replace('#','')}/0F0F0F/?text=STORY&font=inter` },
+    { id: 4, type: 'instagram', title: 'Carousel Slide 1', image: `https://placehold.co/400x400/0F0F0F/${(brandData?.colors?.accent || '6B7CFF').replace('#','')}/?text=SLIDE_1&font=playfair` },
+    { id: 5, type: 'youtube', title: 'Thumbnail Main', image: `https://placehold.co/600x338/${(brandData?.colors?.accent || 'C6A96B').replace('#','')}/0F0F0F/?text=THUMBNAIL&font=playfair` },
+    { id: 6, type: 'reels', title: 'Reel Cover B', image: `https://placehold.co/400x700/0F0F0F/${(brandData?.colors?.accent || 'F5F5F5').replace('#','')}/?text=VLOG&font=satoshi` },
+    { id: 7, type: 'instagram', title: 'Announcement', image: `https://placehold.co/400x400/${(brandData?.colors?.accent || '6B7CFF').replace('#','')}/0F0F0F/?text=NEW&font=playfair` },
+    { id: 8, type: 'story', title: 'Q&A Template', image: `https://placehold.co/400x700/0F0F0F/${(brandData?.colors?.accent || 'C6A96B').replace('#','')}/?text=Q%26A&font=satoshi` },
   ];
 
   const filtered = filter === 'all' ? templates : templates.filter(t => t.type === filter);
 
   return (
-    <div className="animate-fade-in flex flex-col gap-8 w-full max-w-[1200px] mx-auto">
-       <div className="flex justify-between items-center border-b border-light pb-0">
-          <div className="flex gap-8 w-full overflow-x-auto no-scrollbar">
-             <button onClick={() => setFilter('all')} className={`pb-4 border-b-2 -mb-[2px] font-black tracking-widest uppercase text-[10px] px-2 shrink-0 transition-colors ${filter === 'all' ? 'border-accent text-accent' : 'border-transparent text-muted hover:text-primary'}`}>All Templates</button>
-             <button onClick={() => setFilter('instagram')} className={`pb-4 border-b-2 -mb-[2px] font-black tracking-widest uppercase text-[10px] px-2 flex items-center gap-2 shrink-0 transition-colors ${filter === 'instagram' ? 'border-accent text-accent' : 'border-transparent text-muted hover:text-primary'}`}><Layout size={14} /> Instagram</button>
-             <button onClick={() => setFilter('reels')} className={`pb-4 border-b-2 -mb-[2px] font-black tracking-widest uppercase text-[10px] px-2 flex items-center gap-2 shrink-0 transition-colors ${filter === 'reels' ? 'border-accent text-accent' : 'border-transparent text-muted hover:text-primary'}`}><Play size={14} /> Reels</button>
-             <button onClick={() => setFilter('story')} className={`pb-4 border-b-2 -mb-[2px] font-black tracking-widest uppercase text-[10px] px-2 flex items-center gap-2 shrink-0 transition-colors ${filter === 'story' ? 'border-accent text-accent' : 'border-transparent text-muted hover:text-primary'}`}><Phone size={14} /> Stories</button>
+    <div className="flex flex-col gap-10 w-full max-w-7xl mx-auto pb-20">
+       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div>
+            <h2 className="text-4xl font-headline font-bold text-primary mb-2">Editorial Templates</h2>
+            <p className="text-muted text-sm font-medium">Fully customizable layouts synchronized with your brand DNA.</p>
+          </div>
+          <div className="flex gap-4 p-1 bg-surface border border-light rounded-2xl w-max shadow-sm">
+             {['all', 'instagram', 'reels', 'story'].map(f => (
+               <button 
+                 key={f}
+                 onClick={() => setFilter(f)} 
+                 className={`px-6 py-2.5 rounded-xl font-black tracking-widest uppercase text-[10px] transition-all ${filter === f ? 'bg-accent text-white shadow-glow' : 'text-muted hover:text-primary hover:bg-black/5'}`}
+               >
+                 {f === 'all' ? 'All' : f}
+               </button>
+             ))}
           </div>
        </div>
 
        {/* Grid */}
-       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-         {filtered.map(template => (
+       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-10">
+         {filtered.length > 0 ? filtered.map(template => (
              <motion.div 
                layout
-               initial={{ opacity: 0, scale: 0.9 }}
-               animate={{ opacity: 1, scale: 1 }}
-               exit={{ opacity: 0, scale: 0.9 }}
-               transition={{ duration: 0.2 }}
+               initial={{ opacity: 0, y: 20 }}
+               animate={{ opacity: 1, y: 0 }}
                key={template.id} 
-               className="group relative rounded-2xl overflow-hidden border border-light bg-surface hover:border-accent/40 transition-all flex flex-col w-full max-w-[300px] h-[340px] mx-auto shadow-sm hover:shadow-md"
+               className="group relative rounded-3xl overflow-hidden border border-light bg-surface hover:border-accent/40 transition-all flex flex-col w-full h-[400px] shadow-sm hover:shadow-xl hover:-translate-y-1"
              >
-                <div className="flex-1 relative overflow-hidden bg-secondary/50 flex items-center justify-center p-8">
-                  <img src={template.image} alt={template.title} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500 opacity-90 group-hover:opacity-100" />
-                  
-                  {/* Hover Actions */}
-                  <div className="absolute inset-0 bg-primary/95 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-4 backdrop-blur-md">
-                     <button onClick={() => { setEditingTemplate(template); setGeneratedBg(null); }} className="btn btn-primary text-[10px] font-black uppercase tracking-widest w-3/4 shadow-glow flex gap-2 items-center justify-center py-3 h-auto text-secondary">
-                       Edit Design
-                     </button>
-                     <button className="btn btn-outline border-white/20 text-white hover:border-accent hover:text-accent text-[10px] font-black uppercase tracking-widest w-3/4 flex gap-2 items-center justify-center py-3 h-auto">
-                       <Copy size={14} /> Duplicate
-                     </button>
-                     <button className="btn btn-ghost text-muted hover:text-white text-[10px] font-black uppercase tracking-widest w-3/4 flex gap-2 items-center justify-center py-2.5 h-auto mt-2 border-t border-white/10 pt-4">
-                       <Download size={14} /> Export
-                     </button>
-                  </div>
-                </div>
-                <div className="p-5 bg-surface border-t border-light flex justify-between items-center">
-                   <div className="flex flex-col">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-primary">{template.title}</span>
-                      <span className="text-[8px] font-bold uppercase tracking-widest text-muted mt-1">{template.type}</span>
+                <div className="flex-1 relative overflow-hidden bg-secondary/30 flex items-center justify-center p-10">
+                   {/* Abstract background flare */}
+                   <div className="absolute inset-0 bg-gradient-to-tr from-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                   
+                   <img src={template.image} alt={template.title} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-700 brightness-95 group-hover:brightness-100" />
+                   
+                   {/* Hover Actions */}
+                   <div className="absolute inset-0 bg-primary/95 opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col items-center justify-center gap-4 backdrop-blur-md">
+                      <button onClick={() => { setEditingTemplate(template); setGeneratedBg(null); }} className="btn btn-primary text-[10px] font-black uppercase tracking-widest w-2/3 h-12 shadow-glow flex gap-2 items-center justify-center text-white">
+                        <Palette size={14} /> Open Editor
+                      </button>
+                      <button className="btn btn-outline border-white/20 text-white hover:border-accent hover:text-accent text-[10px] font-black uppercase tracking-widest w-2/3 h-12 flex gap-2 items-center justify-center">
+                        <Copy size={14} /> Duplicate
+                      </button>
                    </div>
-                   <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center text-accent">
-                      <ImageIcon size={14} />
+                </div>
+                <div className="p-6 bg-surface border-t border-light/50 flex justify-between items-center group-hover:bg-accent/5 transition-colors">
+                   <div className="flex flex-col">
+                      <span className="text-[11px] font-black uppercase tracking-widest text-primary truncate max-w-[140px]">{template.title}</span>
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-accent mt-1 opacity-60">{template.type}</span>
+                   </div>
+                   <div className="w-10 h-10 rounded-xl bg-white shadow-inner flex items-center justify-center text-accent border border-light/30">
+                      <Download size={16} />
                    </div>
                 </div>
              </motion.div>
-         ))}
+         )) : (
+           <div className="col-span-full py-20 text-center flex flex-col items-center gap-6">
+              <div className="w-20 h-20 rounded-full bg-accent/10 flex items-center justify-center text-accent">
+                <Layout size={40} />
+              </div>
+              <div className="max-w-md">
+                <h3 className="text-2xl font-headline font-bold mb-2">No templates found</h3>
+                <p className="text-muted">Try adjusting your filters or complete the onboarding to generate custom templates.</p>
+              </div>
+           </div>
+         )}
        </div>
 
        {/* Editor Modal */}
