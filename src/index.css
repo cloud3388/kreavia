@@ -176,26 +176,34 @@ input, textarea, select {
 /* Sizing */
 .w-full { width: 100%; }
 .h-full { height: 100%; }
+.w-max { width: max-content; }
+.w-1 { width: 0.25rem; }
+.w-2 { width: 0.5rem; }
+.w-4 { width: 1rem; }
 .w-5 { width: 1.25rem; }
 .h-5 { height: 1.25rem; }
 .w-6 { width: 1.5rem; }
 .h-6 { height: 1.5rem; }
 .w-8 { width: 2rem; }
 .h-8 { height: 2rem; }
-.w-9 { width: 2.25rem; }
-.h-9 { height: 2.25rem; }
 .w-10 { width: 2.5rem; }
 .h-10 { height: 2.5rem; }
 .w-12 { width: 3rem; }
 .h-12 { height: 3rem; }
+.w-14 { width: 3.5rem; }
+.h-14 { height: 3.5rem; }
 .w-16 { width: 4rem; }
 .h-16 { height: 4rem; }
 .w-20 { width: 5rem; }
 .h-20 { height: 5rem; }
 .w-32 { width: 8rem; }
 .h-32 { height: 8rem; }
-.w-max { width: max-content; }
+.w-\[320px\] { width: 320px; }
+.w-\[340px\] { width: 340px; }
+
+.min-h-screen { min-height: 100vh; }
 .min-h-\[820px\] { min-height: 820px; }
+.aspect-square { aspect-ratio: 1 / 1; }
 .aspect-\[4\/5\] { aspect-ratio: 4 / 5; }
 
 /* Effects */
@@ -218,12 +226,77 @@ input, textarea, select {
 .mix-blend-multiply { mix-blend-mode: multiply; }
 
 /* Spacing */
+.p-4 { padding: var(--spacing-4); }
+.p-5 { padding: 1.25rem; }
+.p-6 { padding: var(--spacing-6); }
 .p-8 { padding: var(--spacing-8); }
+.p-10 { padding: 2.5rem; }
 .p-12 { padding: 3rem; }
+
+.px-4 { padding-left: var(--spacing-4); padding-right: var(--spacing-4); }
+.px-6 { padding-left: var(--spacing-6); padding-right: var(--spacing-6); }
+.px-8 { padding-left: var(--spacing-8); padding-right: var(--spacing-8); }
+.px-10 { padding-left: 2.5rem; padding-right: 2.5rem; }
+
+.py-4 { padding-top: var(--spacing-4); padding-bottom: var(--spacing-4); }
+.py-6 { padding-top: var(--spacing-6); padding-bottom: var(--spacing-6); }
+.py-10 { padding-top: 2.5rem; padding-bottom: 2.5rem; }
 .py-20 { padding-top: 5rem; padding-bottom: 5rem; }
 .py-40 { padding-top: 10rem; padding-bottom: 10rem; }
 
+.pt-10 { padding-top: 2.5rem; }
+.pt-16 { padding-top: 4rem; }
+.pt-24 { padding-top: 6rem; }
+.pb-4 { padding-bottom: var(--spacing-4); }
+.pb-0 { padding-bottom: 0; }
+
+.m-0 { margin: 0; }
+.mt-1 { margin-top: 0.25rem; }
+.mt-2 { margin-top: 0.5rem; }
+.mt-4 { margin-top: 1rem; }
+.mt-8 { margin-top: 2rem; }
+.mt-10 { margin-top: 2.5rem; }
+.mb-2 { margin-bottom: 0.5rem; }
+.mb-3 { margin-bottom: 0.75rem; }
+.mb-4 { margin-bottom: 1rem; }
+.mb-6 { margin-bottom: 1.5rem; }
+.mb-20 { margin-bottom: 5rem; }
+.ml-1 { margin-left: 0.25rem; }
+.ml-auto { margin-left: auto; }
+.mx-auto { margin-left: auto; margin-right: auto; }
+
+/* Text Sizes */
+.text-xs { font-size: 0.75rem; }
+.text-sm { font-size: 0.875rem; }
+.text-base { font-size: 1rem; }
+.text-lg { font-size: 1.125rem; }
+.text-xl { font-size: 1.25rem; }
+.text-2xl { font-size: 1.5rem; }
+.text-3xl { font-size: 1.875rem; }
+.text-4xl { font-size: 2.25rem; }
+.text-5xl { font-size: 3rem; }
+.text-6xl { font-size: 3.75rem; }
+.text-7xl { font-size: 4.5rem; }
+.text-\[10px\] { font-size: 10px; }
+.text-\[8px\] { font-size: 8px; }
+.text-\[5rem\] { font-size: 5rem; }
+
+.tracking-tighter { letter-spacing: -0.05em; }
+.tracking-tight { letter-spacing: -0.025em; }
+.tracking-wide { letter-spacing: 0.025em; }
+.tracking-widest { letter-spacing: 0.1em; }
+
 /* Responsive (Minimal Mobile First) */
+@media (min-width: 768px) {
+  .md\:flex { display: flex; }
+  .md\:hidden { display: none; }
+  .md\:w-5 { width: 1.25rem; }
+  .md\:h-5 { height: 1.25rem; }
+  .md\:px-8 { padding-left: var(--spacing-8); padding-right: var(--spacing-8); }
+  .md\:pt-10 { padding-top: 2.5rem; }
+  .md\:pb-8 { padding-bottom: 2rem; }
+}
+
 @media (min-width: 1024px) {
   .lg\:flex { display: flex; }
   .lg\:grid-cols-12 { grid-template-columns: repeat(12, minmax(0, 1fr)); }
@@ -231,10 +304,13 @@ input, textarea, select {
   .lg\:col-span-12 { grid-column: span 12 / span 12; }
   .lg\:w-\[280px\] { width: 280px; }
   .lg\:max-w-\[70vh\] { max-width: 70vh; }
+  .lg\:items-start { align-items: flex-start; }
+  .lg\:text-left { text-align: left; }
 }
 
 .shadow-2xl { box-shadow: var(--shadow-2xl); }
 .shadow-inner { box-shadow: inset 0 2px 4px 0 rgba(0,0,0,0.06); }
+.shadow-md { box-shadow: var(--shadow-md); }
 
 /* Glassmorphism Cards */
 .glass-card {
@@ -249,6 +325,11 @@ input, textarea, select {
   overflow: hidden;
 }
 
+.glass-card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+}
+
 .glass-card::before {
   content: "";
   position: absolute;
@@ -259,10 +340,14 @@ input, textarea, select {
 
 .bg-card\/50 { background-color: rgba(255, 253, 251, 0.5); }
 .bg-card\/80 { background-color: rgba(255, 253, 251, 0.8); }
+.bg-accent\/5 { background-color: rgba(141, 110, 99, 0.05); }
+.bg-accent\/10 { background-color: rgba(141, 110, 99, 0.1); }
+.bg-accent\/20 { background-color: rgba(141, 110, 99, 0.2); }
+.bg-primary\/5 { background-color: rgba(62, 39, 35, 0.05); }
 
 .translate-x-1\/3 { transform: translateX(33.33%); }
-.-translate-x-1\/3 { transform: translateX(-33.33%); }
 .translate-y-1\/4 { transform: translateY(25%); }
+.-translate-x-1\/3 { transform: translateX(-33.33%); }
 .-translate-y-1\/4 { transform: translateY(-25%); }
 
 .italic { font-style: italic; }
@@ -273,6 +358,7 @@ input, textarea, select {
 .leading-\[1\] { line-height: 1; }
 .leading-tight { line-height: 1.25; }
 .leading-relaxed { line-height: 1.625; }
+.leading-none { line-height: 1; }
 
 /* Gradients & Filters */
 .bg-gradient-to-tr { background-image: linear-gradient(to top right, var(--tw-gradient-stops)); }

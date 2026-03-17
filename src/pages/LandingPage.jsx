@@ -9,8 +9,14 @@ const LandingPage = () => {
       {/* Hero Section - 12 Column Grid / 820px Height */}
       <section className="container min-h-[820px] flex items-center py-20 relative">
         {/* Background Gradients */}
-        <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-accent/10 rounded-full blur-[120px] pointer-events-none -z-10 translate-x-1/3 -translate-y-1/4"></div>
-        <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-highlight/5 rounded-full blur-[100px] pointer-events-none -z-10 -translate-x-1/3 translate-y-1/4"></div>
+        <div 
+          className="absolute top-0 right-0 rounded-full blur-[120px] pointer-events-none -z-10 translate-x-1/3 -translate-y-1/4 bg-accent/10" 
+          style={{ width: '800px', height: '800px' }}
+        ></div>
+        <div 
+          className="absolute bottom-0 left-0 rounded-full blur-[100px] pointer-events-none -z-10 -translate-x-1/3 translate-y-1/4 bg-highlight/5" 
+          style={{ width: '600px', height: '600px' }}
+        ></div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 w-full items-center">
           
@@ -61,8 +67,8 @@ const LandingPage = () => {
                 transition={{ duration: 0.5, delay: 0.5 }}
                 className="flex items-center gap-6 mt-4 text-[10px] uppercase tracking-widest text-muted font-black"
              >
-                <div className="flex items-center gap-2"><CheckCircle2 size={16} className="text-green-600" /> No design skills needed</div>
-                <div className="flex items-center gap-2"><CheckCircle2 size={16} className="text-green-600" /> No credit card required</div>
+                <div className="flex items-center gap-2"><CheckCircle2 size={16} style={{ color: '#16a34a' }} /> No design skills needed</div>
+                <div className="flex items-center gap-2"><CheckCircle2 size={16} style={{ color: '#16a34a' }} /> No credit card required</div>
              </motion.div>
           </div>
           
@@ -77,8 +83,8 @@ const LandingPage = () => {
                 className="absolute z-20 w-[320px] bg-secondary rounded-2xl overflow-hidden shadow-2xl border-4 border-white/10"
                 style={{ top: '10%' }}
              >
-                <div className="aspect-[4/5] bg-[#F5F5F5] p-8 flex flex-col justify-center items-center text-center relative overflow-hidden">
-                   <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 mix-blend-overlay"></div>
+                <div className="aspect-[4/5] p-8 flex flex-col justify-center items-center text-center relative overflow-hidden" style={{ backgroundColor: '#F5F5F5' }}>
+                   <div className="absolute inset-0 opacity-10 mix-blend-overlay" style={{ backgroundImage: "url('https://grainy-gradients.vercel.app/noise.svg')" }}></div>
                    <div className="w-16 h-16 rounded-full border border-primary mb-6 flex items-center justify-center font-headline text-2xl text-primary">B</div>
                    <h3 className="font-headline text-4xl text-primary leading-tight">Elevate<br/>Your<br/>Aesthetic</h3>
                    <div className="h-1 w-12 bg-accent mt-8"></div>
@@ -94,10 +100,10 @@ const LandingPage = () => {
              >
                 <div className="text-xs font-ui uppercase tracking-widest text-muted">Generated Palette</div>
                 <div className="flex gap-2">
-                   <div className="w-10 h-10 rounded-full bg-[#0F0F0F] border border-white/20 shadow-md"></div>
-                   <div className="w-10 h-10 rounded-full bg-[#F5F5F5] shadow-md"></div>
-                   <div className="w-10 h-10 rounded-full bg-[#C6A96B] shadow-md"></div>
-                   <div className="w-10 h-10 rounded-full bg-[#6B7CFF] shadow-md"></div>
+                   <div className="w-10 h-10 rounded-full border border-white/20 shadow-md" style={{ backgroundColor: '#0F0F0F' }}></div>
+                   <div className="w-10 h-10 rounded-full shadow-md" style={{ backgroundColor: '#F5F5F5' }}></div>
+                   <div className="w-10 h-10 rounded-full shadow-md" style={{ backgroundColor: '#C6A96B' }}></div>
+                   <div className="w-10 h-10 rounded-full shadow-md" style={{ backgroundColor: '#6B7CFF' }}></div>
                 </div>
              </motion.div>
 
