@@ -26,6 +26,12 @@ const persistGeneration = async ({ userId, projectId, generationType, prompt, re
       model,
       credits_used: creditsUsed,
     });
+
+    await supabase.from('ai_usage').insert({
+      user_id: userId,
+      generation_type: generationType,
+      credits_used: creditsUsed,
+    });
   } catch (err) {
     console.warn('[AI Service] Persistence failed (non-critical):', err.message);
   }
