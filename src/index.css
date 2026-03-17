@@ -102,11 +102,23 @@ input, textarea, select {
 .text-secondary { color: var(--color-secondary); }
 .text-accent { color: var(--color-accent); }
 .text-muted { color: var(--color-text-muted); }
+.text-white { color: #ffffff; }
+.text-white\/20 { color: rgba(255, 255, 255, 0.2); }
+.text-white\/50 { color: rgba(255, 255, 255, 0.5); }
+.text-white\/90 { color: rgba(255, 255, 255, 0.9); }
 
 .bg-primary { background-color: var(--color-primary); }
 .bg-secondary { background-color: var(--color-secondary); }
 .bg-accent { background-color: var(--color-accent); }
 .bg-card { background-color: var(--bg-card); }
+.bg-surface { background-color: var(--color-surface); }
+.bg-white { background-color: #ffffff; }
+.bg-black { background-color: #000000; }
+.bg-black\/5 { background-color: rgba(0, 0, 0, 0.05); }
+.bg-black\/40 { background-color: rgba(0, 0, 0, 0.4); }
+.bg-black\/80 { background-color: rgba(0, 0, 0, 0.8); }
+.bg-black\/90 { background-color: rgba(0, 0, 0, 0.9); }
+.bg-black\/95 { background-color: rgba(0, 0, 0, 0.95); }
 
 .font-headline { font-family: var(--font-headline); }
 .font-body { font-family: var(--font-body); }
