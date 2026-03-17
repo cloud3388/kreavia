@@ -23,8 +23,32 @@ const MainLayout = () => {
           <Link to="/" className="font-headline text-2xl font-bold text-primary tracking-tight">Kreavia<span className="text-accent">.ai</span></Link>
         </div>
         <div className="hidden md:flex gap-10 items-center">
-          <Link to="/" className="text-muted hover:text-accent text-sm font-black uppercase tracking-widest transition-colors px-2">Features</Link>
-          <Link to="/" className="text-muted hover:text-accent text-sm font-black uppercase tracking-widest transition-colors px-2">Pricing</Link>
+          <button 
+            onClick={() => {
+              if (window.location.pathname !== '/') {
+                navigate('/');
+                setTimeout(() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' }), 100);
+              } else {
+                document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
+              }
+            }}
+            className="text-muted hover:text-accent text-sm font-black uppercase tracking-widest transition-colors px-2"
+          >
+            Features
+          </button>
+          <button 
+            onClick={() => {
+              if (window.location.pathname !== '/') {
+                navigate('/');
+                setTimeout(() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' }), 100);
+              } else {
+                document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' });
+              }
+            }}
+            className="text-muted hover:text-accent text-sm font-black uppercase tracking-widest transition-colors px-2"
+          >
+            Pricing
+          </button>
           
           {user ? (
             <div className="flex items-center gap-6">

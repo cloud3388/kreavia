@@ -77,8 +77,8 @@ const TemplatesPage = () => {
                key={template.id} 
                className="group relative rounded-2xl overflow-hidden border border-light bg-surface hover:border-accent/40 transition-all flex flex-col w-full max-w-[300px] h-[340px] mx-auto shadow-sm hover:shadow-md"
              >
-                <div className="flex-1 relative overflow-hidden bg-secondary flex items-center justify-center p-8">
-                  <img src={template.image} alt={template.title} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500 opacity-90 group-hover:opacity-100 mix-blend-multiply" />
+                <div className="flex-1 relative overflow-hidden bg-secondary/50 flex items-center justify-center p-8">
+                  <img src={template.image} alt={template.title} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500 opacity-90 group-hover:opacity-100" />
                   
                   {/* Hover Actions */}
                   <div className="absolute inset-0 bg-primary/95 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-4 backdrop-blur-md">
@@ -193,7 +193,7 @@ const TemplatesPage = () => {
                          <img 
                             src={generatedBg || editingTemplate.image.replace('400x500', '1080x1080').replace('400x700', '1080x1920')} 
                             alt="Canvas" 
-                            className={`w-full h-full object-cover transition-opacity duration-1000 ${isGenerating ? 'opacity-20' : 'opacity-100'} mix-blend-normal`} 
+                            className={`w-full h-full object-cover transition-opacity duration-1000 ${isGenerating ? 'opacity-20' : 'opacity-100'}`} 
                          />
                          
                          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center text-center p-16 pointer-events-none">

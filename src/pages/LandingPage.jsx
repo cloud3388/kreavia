@@ -125,7 +125,7 @@ const LandingPage = () => {
       </section>
 
        {/* Features Section */}
-       <section className="container py-40 flex flex-col items-center relative z-10">
+       <section id="features" className="container py-40 flex flex-col items-center relative z-10">
          <div className="text-center mb-20">
            <h2 className="text-5xl md:text-6xl font-headline mb-6 text-primary font-bold">Everything you need.</h2>
            <p className="text-xl text-muted font-body font-medium">Professional creator tools, fully automated for your unique vibe.</p>
@@ -155,7 +155,41 @@ const LandingPage = () => {
            </motion.div>
          </div>
       </section>
-      
+       {/* Pricing Section */}
+       <section id="pricing" className="container py-40 flex flex-col items-center relative z-10">
+         <div className="text-center mb-20">
+           <h2 className="text-5xl md:text-6xl font-headline mb-6 text-primary font-bold">Simple, transparent pricing.</h2>
+           <p className="text-xl text-muted font-body font-medium">Everything you need to build your brand identity.</p>
+         </div>
+         
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 max-w-4xl w-full">
+            <div className="glass-card p-12 bg-surface flex flex-col gap-6">
+               <div className="text-accent text-[10px] font-bold uppercase tracking-widest">Free Plan</div>
+               <div className="text-5xl font-headline font-bold text-primary">$0<span className="text-lg text-muted font-medium">/mo</span></div>
+               <ul className="flex flex-col gap-4 my-4">
+                  <li className="flex items-center gap-3 text-muted text-sm font-medium"><CheckCircle2 size={16} className="text-green-500" /> 3 AI Generations</li>
+                  <li className="flex items-center gap-3 text-muted text-sm font-medium"><CheckCircle2 size={16} className="text-green-500" /> Basic Templates</li>
+                  <li className="flex items-center gap-3 text-muted text-sm font-medium"><CheckCircle2 size={16} className="text-green-500" /> PNG Export</li>
+               </ul>
+               <Link to="/signup" className="btn btn-outline w-full h-14 uppercase font-bold tracking-widest text-xs">Get Started</Link>
+            </div>
+            
+            <div className="glass-card p-12 bg-primary text-secondary flex flex-col gap-6 relative overflow-hidden" style={{ backgroundColor: '#3E2723' }}>
+               <div className="absolute top-0 right-0 p-4">
+                  <span className="bg-accent text-white text-[9px] font-bold px-3 py-1 rounded-full uppercase tracking-widest">Popular</span>
+               </div>
+               <div className="text-accent/50 text-[10px] font-bold uppercase tracking-widest">Pro Creator</div>
+               <div className="text-5xl font-headline font-bold">$19<span className="text-lg text-accent/50 font-medium">/mo</span></div>
+               <ul className="flex flex-col gap-4 my-4">
+                  <li className="flex items-center gap-3 text-secondary/70 text-sm font-medium"><CheckCircle2 size={16} className="text-accent" /> Unlimited AI Generations</li>
+                  <li className="flex items-center gap-3 text-secondary/70 text-sm font-medium"><CheckCircle2 size={16} className="text-accent" /> SVG Vector Exports</li>
+                  <li className="flex items-center gap-3 text-secondary/70 text-sm font-medium"><CheckCircle2 size={16} className="text-accent" /> Premium Logo Mockups</li>
+                  <li className="flex items-center gap-3 text-secondary/70 text-sm font-medium"><CheckCircle2 size={16} className="text-accent" /> Full Brand Deck PDF</li>
+               </ul>
+               <Link to="/signup" className="btn btn-primary w-full h-14 bg-accent uppercase font-bold tracking-widest text-xs shadow-glow">Upgrade Now</Link>
+            </div>
+         </div>
+       </section>
     </div>
   );
 };

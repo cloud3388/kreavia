@@ -257,7 +257,7 @@ const BrandKitPage = () => {
                 <div className="absolute top-0 right-0 w-48 h-48 bg-accent/10 blur-[100px] rounded-full -mr-24 -mt-24 group-hover:bg-accent/20 transition-all duration-1000"></div>
                 <div className="relative z-10">
                    <div className="text-accent/50 text-[9px] font-black uppercase tracking-[0.2em] mb-4">Master Archetype</div>
-                   <div className="text-4xl font-headline font-bold tracking-tight mb-2">{brandData?.brandArchetype || 'The Visionary'}</div>
+                   <div className="text-4xl font-headline font-bold tracking-tight mb-2 text-secondary">{brandData?.brandArchetype || 'The Visionary'}</div>
                 </div>
                 <div className="w-16 h-0.5 bg-accent/20 relative z-10 mt-2"></div>
                 <div className="relative z-10 overflow-hidden">
@@ -278,7 +278,20 @@ const BrandKitPage = () => {
                    </div>
                 </div>
                 <div className="mt-auto relative z-10">
-                  <button className="btn btn-primary w-full py-4 shadow-xl group-hover:shadow-glow transition-all duration-500 font-bold uppercase tracking-[0.2em] text-[10px]">
+                  <button 
+                    onClick={() => {
+                      const btn = document.activeElement;
+                      const originalText = btn.innerText;
+                      btn.innerText = 'PREPARING PDF...';
+                      btn.disabled = true;
+                      setTimeout(() => {
+                        window.print();
+                        btn.innerText = originalText;
+                        btn.disabled = false;
+                      }, 1500);
+                    }}
+                    className="btn btn-primary w-full py-4 shadow-xl group-hover:shadow-glow transition-all duration-500 font-bold uppercase tracking-[0.2em] text-[10px]"
+                  >
                     Download brand deck
                   </button>
                 </div>
