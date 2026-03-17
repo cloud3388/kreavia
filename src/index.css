@@ -220,7 +220,7 @@ input, textarea, select {
   .lg\:col-span-6 { grid-column: span 6 / span 6; }
   .lg\:col-span-12 { grid-column: span 12 / span 12; }
   .lg\:w-\[280px\] { width: 280px; }
-  .lg\:max-w-\[70vh\] { max-w: 70vh; }
+  .lg\:max-w-\[70vh\] { max-width: 70vh; }
 }
 
 .shadow-2xl { box-shadow: var(--shadow-2xl); }
@@ -241,7 +241,8 @@ input, textarea, select {
 
 .glass-card::before {
   content: "";
-  absolute: inset 0;
+  position: absolute;
+  inset: 0;
   background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, transparent 100%);
   pointer-events: none;
 }
@@ -262,6 +263,30 @@ input, textarea, select {
 .leading-\[1\] { line-height: 1; }
 .leading-tight { line-height: 1.25; }
 .leading-relaxed { line-height: 1.625; }
+
+/* Gradients & Filters */
+.bg-gradient-to-tr { background-image: linear-gradient(to top right, var(--tw-gradient-stops)); }
+.bg-gradient-to-b { background-image: linear-gradient(to bottom, var(--tw-gradient-stops)); }
+.bg-gradient-to-br { background-image: linear-gradient(to bottom right, var(--tw-gradient-stops)); }
+
+.from-accent\/10 { --tw-gradient-from: rgba(141, 110, 99, 0.1); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(141, 110, 99, 0)); }
+.from-accent\/20 { --tw-gradient-from: rgba(141, 110, 99, 0.2); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(141, 110, 99, 0)); }
+.via-accent { --tw-gradient-stops: var(--tw-gradient-from), var(--color-accent), var(--tw-gradient-to); }
+.to-primary\/20 { --tw-gradient-to: rgba(62, 39, 35, 0.2); }
+
+.grayscale { filter: grayscale(100%); }
+.group-hover\:grayscale-0:hover { filter: grayscale(0); }
+
+/* Scrollbars */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+.custom-scrollbar::-webkit-scrollbar { width: 6px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: var(--bg-main); }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 10px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: var(--color-accent); }
+
+.pb-safe { padding-bottom: env(safe-area-inset-bottom); }
 
 /* Inputs */
 .input {
