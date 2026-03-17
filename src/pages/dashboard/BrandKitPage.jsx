@@ -81,159 +81,216 @@ const BrandKitPage = () => {
     );
   }
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: { 
+      opacity: 1,
+      transition: { staggerChildren: 0.1 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: { duration: 0.5, ease: "easeOut" }
+    }
+  };
+
   return (
-    <div className="animate-fade-in flex flex-col gap-12 max-w-6xl pb-24">
+    <motion.div 
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="flex flex-col gap-12 max-w-6xl pb-24"
+    >
       
       {/* Overview Card */}
-      <div className="glass-card p-10 flex justify-between items-center border-accent/20 bg-surface relative overflow-hidden group">
+      <motion.div variants={itemVariants} className="glass-card p-10 flex justify-between items-center border-accent/20 bg-surface relative overflow-hidden group shadow-xl">
         <div className="absolute inset-0 bg-gradient-to-br from-accent/5 to-transparent pointer-events-none"></div>
         <div className="relative z-10">
-          <h3 className="text-accent text-xs font-bold uppercase tracking-widest mb-2 flex items-center gap-2">
-            <Sparkles size={14} /> Brand Archetype
+          <h3 className="text-accent text-[10px] font-bold uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
+            <Sparkles size={12} /> Brand Identity DNA
           </h3>
-          <div className="text-4xl font-headline text-primary font-bold">{brandData?.brandArchetype || 'The Visionary'}</div>
+          <div className="text-5xl font-headline text-primary font-bold tracking-tight">{brandData?.brandArchetype || 'The Visionary'}</div>
         </div>
         <div className="text-right relative z-10">
-           <div className="text-muted text-xs font-bold uppercase tracking-widest mb-1">Brand Score</div>
-           <div className="text-6xl font-ui font-black text-primary/10 group-hover:text-accent/20 transition-colors duration-500 absolute -top-4 -right-2">
-             {brandData?.brandScore || 85}
+           <div className="text-muted text-[10px] font-bold uppercase tracking-[0.2em] mb-1">Brand Consistency</div>
+           <div className="text-6xl font-ui font-black text-primary/5 group-hover:text-accent/10 transition-colors duration-700 absolute -top-6 -right-4 select-none">
+             {brandData?.brandScore || 85}%
            </div>
-           <div className="text-5xl font-ui font-bold text-primary">{brandData?.brandScore || 85}</div>
+           <div className="text-6xl font-ui font-bold text-primary tracking-tighter">{brandData?.brandScore || 85}<span className="text-2xl text-accent font-medium ml-1">%</span></div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Main Grid Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
          
-          {/* Top Row */}
-          <div className="lg:col-span-5 flex flex-col gap-6">
-             <div className="flex items-center justify-between mb-2">
+          {/* Logos Row */}
+          <motion.div variants={itemVariants} className="lg:col-span-5 flex flex-col gap-6">
+             <div className="flex items-center justify-between px-2">
                <div className="flex items-center gap-3">
-                 <div className="p-2 rounded-lg bg-accent/10 text-accent">
-                   <ImageIcon size={20} />
+                 <div className="p-2.5 rounded-xl bg-accent/10 text-accent shadow-inner">
+                   <ImageIcon size={22} strokeWidth={2.5} />
                  </div>
-                 <h3 className="text-2xl font-headline text-primary">Logos</h3>
+                 <h3 className="text-2xl font-headline text-primary font-bold">Official Marks</h3>
                </div>
-               <button className="text-sm font-bold text-accent hover:text-primary transition-colors">Regenerate</button>
+               <button className="text-[10px] font-bold text-accent uppercase tracking-widest hover:text-primary transition-colors border-b border-accent/20 pb-1">Refine Identity</button>
              </div>
              
-             {/* Primary Logo Card - 420x260 */}
-             <div className="glass-card flex flex-col items-center justify-center relative group overflow-hidden border-light h-[260px] bg-white">
-                 <div className="absolute inset-0 bg-accent/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                 <img src={brandData?.logos?.[0]?.url || "https://placehold.co/400x400/3E2723/FDF8F1?text=Logo"} alt="Primary Logo" className="w-32 h-32 object-contain group-hover:scale-110 transition-transform duration-500" />
+             <div className="glass-card flex flex-col items-center justify-center relative group overflow-hidden border-light h-[280px] bg-white shadow-lg">
+                 <div className="absolute inset-0 bg-accent/5 opacity-0 group-hover:opacity-100 transition-all duration-700"></div>
+                 <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="p-2 rounded-full bg-surface shadow-md cursor-help" title="High Resolution PNG">
+                       < ImageIcon size={14} className="text-accent" />
+                    </div>
+                 </div>
+                 <img 
+                   src={brandData?.logos?.[0]?.url || "https://placehold.co/400x400/3E2723/FDF8F1?text=Logo"} 
+                   alt="Primary Logo" 
+                   className="w-40 h-40 object-contain drop-shadow-2xl group-hover:scale-105 transition-transform duration-700" 
+                 />
                  
-                 {/* Actions overlay */}
-                 <div className="absolute inset-x-0 bottom-0 p-4 flex gap-2 translate-y-full group-hover:translate-y-0 transition-transform bg-gradient-to-t from-surface to-transparent">
-                    <button className="btn btn-primary text-xs flex-1">Download PNG</button>
-                    <button className="btn btn-outline text-xs flex-1 border-accent/20 text-accent hover:border-accent">Download SVG</button>
+                 <div className="absolute inset-x-0 bottom-0 p-6 flex gap-3 translate-y-full group-hover:translate-y-0 transition-all duration-500 bg-gradient-to-t from-surface to-transparent backdrop-blur-sm">
+                    <button className="btn btn-primary text-[10px] uppercase font-bold tracking-widest flex-1 h-10 shadow-glow">SVG Vector</button>
+                    <button className="btn btn-outline text-[10px] uppercase font-bold tracking-widest flex-1 h-10 border-accent/20 text-accent hover:border-accent">HQ Print</button>
                  </div>
              </div>
-          </div>
+          </motion.div>
 
-          <div className="lg:col-span-7 flex flex-col gap-6">
-             <div className="flex items-center justify-between mb-2">
+          {/* Colors Row */}
+          <motion.div variants={itemVariants} className="lg:col-span-7 flex flex-col gap-6">
+             <div className="flex items-center justify-between px-2">
                <div className="flex items-center gap-3">
-                 <div className="p-2 rounded-lg bg-accent/10 text-accent">
-                   <Palette size={20} />
+                 <div className="p-2.5 rounded-xl bg-accent/10 text-accent shadow-inner">
+                   <Palette size={22} strokeWidth={2.5} />
                  </div>
-                 <h3 className="text-2xl font-headline text-primary">Color Palette</h3>
+                 <h3 className="text-2xl font-headline text-primary font-bold">Chromatic palette</h3>
                </div>
-               <button className="text-sm font-bold text-accent hover:text-primary transition-colors">Export Palette</button>
+               <button className="text-[10px] font-bold text-accent uppercase tracking-widest hover:text-primary transition-colors border-b border-accent/20 pb-1">Edit Palette</button>
              </div>
              
-             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 h-[260px]">
+             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 h-[280px]">
                {Object.entries(brandData?.colors || {}).map(([name, hex]) => (
-                 <div key={name} className="glass-card overflow-hidden group flex flex-col border-none shadow-sm hover:shadow-md">
+                 <div key={name} className="glass-card overflow-hidden group flex flex-col border-none shadow-sm hover:shadow-xl transition-all duration-500 hover:-translate-y-1">
                    <div 
-                     className="flex-1 w-full transition-transform duration-500 group-hover:scale-110" 
+                     className="flex-1 w-full transition-transform duration-700 group-hover:scale-110 relative" 
                      style={{ backgroundColor: hex || '#3E2723' }}
-                   />
-                   <div className="p-3 flex justify-between items-center bg-surface border-t border-light">
-                     <div>
-                       <div className="font-ui font-bold text-[10px] uppercase text-muted tracking-widest mb-0.5">{name}</div>
+                   >
+                     <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <Copy size={24} className="text-white drop-shadow-md opacity-50" />
+                     </div>
+                   </div>
+                   <div className="p-4 flex justify-between items-center bg-surface border-t border-light/50">
+                     <div className="min-w-0 pr-2">
+                       <div className="font-ui font-bold text-[9px] uppercase text-muted/60 tracking-[0.15em] mb-0.5 truncate">{name}</div>
                        <div className="font-ui font-black text-xs text-primary tracking-wide">{(hex || '').toUpperCase()}</div>
                      </div>
                      <button 
                        onClick={() => copyToClipboard(hex)}
-                       className="p-1.5 rounded-lg hover:bg-accent/10 text-muted hover:text-accent transition-all"
+                       className="p-2 rounded-xl hover:bg-accent/10 text-muted/40 hover:text-accent transition-all shrink-0"
                      >
-                       {copiedVar === hex ? <CheckCircle size={14} className="text-green-600" /> : <Copy size={14} />}
+                       {copiedVar === hex ? <CheckCircle size={16} className="text-green-600" /> : <Copy size={16} />}
                      </button>
                    </div>
                  </div>
                ))}
              </div>
-          </div>
+          </motion.div>
 
-          {/* Bottom Row */}
-          <div className="lg:col-span-8 flex flex-col gap-6 mt-4">
-             <div className="flex items-center gap-3 mb-2">
-               <div className="p-2 rounded-lg bg-accent/10 text-accent">
-                 <Type size={20} />
+          {/* Type Row */}
+          <motion.div variants={itemVariants} className="lg:col-span-8 flex flex-col gap-6 mt-4">
+             <div className="flex items-center gap-3 mb-2 px-2">
+               <div className="p-2.5 rounded-xl bg-accent/10 text-accent shadow-inner">
+                 <Type size={22} strokeWidth={2.5} />
                </div>
-               <h3 className="text-2xl font-headline text-primary">Font Pairing</h3>
+               <h3 className="text-2xl font-headline text-primary font-bold">Typographic Pairing</h3>
              </div>
              
-             <div className="glass-card p-10 border-light flex flex-col md:flex-row gap-8 min-h-[300px] bg-surface">
-                 <div className="flex-1 flex flex-col justify-center gap-8 pr-10 md:border-r border-accent/10">
-                   <div>
-                     <div className="text-accent text-[10px] font-bold uppercase tracking-widest mb-2">Headline</div>
-                     <div className="font-headline text-4xl text-primary font-bold">{brandData?.typography?.headline || 'Playfair Display'}</div>
-                   </div>
-                   <div>
-                     <div className="text-accent text-[10px] font-bold uppercase tracking-widest mb-2">Body Text</div>
-                     <div className="font-body text-xl text-primary/80">{brandData?.typography?.body || 'Inter'}</div>
-                   </div>
-                   <div>
-                     <div className="text-accent text-[10px] font-bold uppercase tracking-widest mb-2">UI Accent</div>
-                     <div className="font-ui text-lg text-primary/60 italic">{brandData?.typography?.ui || 'Satoshi'}</div>
-                   </div>
-                </div>
- 
-                <div className="flex-[1.8] flex flex-col justify-center bg-secondary/50 p-10 rounded-2xl border border-accent/5">
-                   <div className="text-[10px] font-bold uppercase tracking-widest text-accent mb-6">Live Mockup</div>
-                   <h4 className="font-headline text-5xl mb-6 leading-[1.1] text-primary font-bold">The Art of<br/>Craftsmanship</h4>
-                   <p className="font-body text-primary/70 leading-relaxed text-lg max-w-md">Experience a minimalist approach to luxury branding, where every detail is curated for the modern visionary.</p>
-                </div>
+             <div className="glass-card p-10 border-accent/10 flex flex-col md:grid md:grid-cols-12 gap-10 min-h-[340px] bg-surface relative overflow-hidden shadow-xl">
+                 <div className="absolute top-0 left-0 w-32 h-32 bg-accent/5 blur-[80px] rounded-full"></div>
+                 
+                 <div className="md:col-span-4 flex flex-col justify-center gap-10 pr-6 relative z-10">
+                    <div className="group cursor-default">
+                      <div className="text-accent text-[9px] font-black uppercase tracking-[0.2em] mb-2.5 opacity-60">Headline</div>
+                      <div className="font-headline text-3xl text-primary font-bold leading-tight group-hover:text-accent transition-colors">{brandData?.typography?.headline || 'Playfair Display'}</div>
+                    </div>
+                    <div className="group cursor-default">
+                      <div className="text-accent text-[9px] font-black uppercase tracking-[0.2em] mb-2.5 opacity-60">Body Narrative</div>
+                      <div className="font-body text-xl text-primary/80 leading-relaxed font-medium">{brandData?.typography?.body || 'Inter'}</div>
+                    </div>
+                    <div className="group cursor-default">
+                      <div className="text-accent text-[9px] font-black uppercase tracking-[0.2em] mb-2.5 opacity-60">Functional Interface</div>
+                      <div className="font-ui text-md text-primary/50 tracking-wide font-bold">{brandData?.typography?.ui || 'Satoshi'}</div>
+                    </div>
+                 </div>
+  
+                 <div className="md:col-span-8 flex flex-col justify-center bg-secondary/30 p-12 rounded-[2rem] border border-accent/5 backdrop-blur-sm relative group shadow-inner">
+                    <div className="absolute inset-0 bg-gradient-to-br from-accent/[0.02] to-transparent pointer-events-none"></div>
+                    <div className="text-[9px] font-black uppercase tracking-[0.25em] text-accent/60 mb-8 flex items-center gap-2">
+                      <div className="w-4 h-px bg-accent/30"></div> Typesetting Specimen
+                    </div>
+                    <h4 className="font-headline text-6xl mb-8 leading-[1.05] text-primary font-bold tracking-tight">The Art of Essence.</h4>
+                    <p className="font-body text-primary/60 leading-[1.8] text-lg max-w-lg font-medium italic">
+                      "Design is not just what it looks like and feels like. Design is how it works."
+                    </p>
+                    <div className="mt-10 flex gap-4">
+                       <div className="w-10 h-10 rounded-full border border-accent/20 flex items-center justify-center text-[10px] font-bold text-accent">Aa</div>
+                       <div className="flex-1 h-px bg-accent/10 my-auto"></div>
+                    </div>
+                 </div>
              </div>
-          </div>
+          </motion.div>
 
-          <div className="lg:col-span-4 flex flex-col gap-6 mt-4">
-             <div className="flex items-center gap-3 mb-2">
-               <div className="p-2 rounded-lg bg-accent/10 text-accent">
-                 <Sparkles size={20} />
+          {/* Persona Row */}
+          <motion.div variants={itemVariants} className="lg:col-span-4 flex flex-col gap-6 mt-4">
+             <div className="flex items-center gap-3 mb-2 px-2">
+               <div className="p-2.5 rounded-xl bg-accent/10 text-accent shadow-inner">
+                 <Sparkles size={22} strokeWidth={2.5} />
                </div>
-               <h3 className="text-2xl font-headline text-primary">Brand Persona</h3>
+               <h3 className="text-2xl font-headline text-primary font-bold">Brand persona</h3>
              </div>
              
-             <div className="glass-card p-10 border-light flex flex-col gap-8 min-h-[300px] bg-primary text-secondary relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-accent/20 blur-3xl rounded-full -mr-16 -mt-16 group-hover:bg-accent/30 transition-colors"></div>
+             <div className="glass-card p-10 border-none flex flex-col gap-8 min-h-[340px] bg-primary text-secondary relative overflow-hidden group shadow-[0_20px_40px_rgba(62,39,35,0.15)]">
+                <div className="absolute top-0 right-0 w-48 h-48 bg-accent/10 blur-[100px] rounded-full -mr-24 -mt-24 group-hover:bg-accent/20 transition-all duration-1000"></div>
                 <div className="relative z-10">
-                   <div className="text-accent/60 text-[10px] font-bold uppercase tracking-widest mb-3">Core Archetype</div>
-                   <div className="text-3xl font-headline font-bold">{brandData?.brandArchetype || 'The Visionary'}</div>
+                   <div className="text-accent/50 text-[9px] font-black uppercase tracking-[0.2em] mb-4">Master Archetype</div>
+                   <div className="text-4xl font-headline font-bold tracking-tight mb-2">{brandData?.brandArchetype || 'The Visionary'}</div>
                 </div>
-                <div className="w-12 h-0.5 bg-accent/30 relative z-10"></div>
-                <div className="relative z-10">
-                   <div className="text-accent/60 text-[10px] font-bold uppercase tracking-widest mb-4">Voice Profile</div>
-                   <div className="flex flex-wrap gap-2">
-                      <span className="px-4 py-1.5 rounded-full border border-accent/20 text-xs font-bold bg-white/5 text-accent">Sophisticated</span>
-                      <span className="px-4 py-1.5 rounded-full border border-accent/20 text-xs font-bold bg-white/5 text-accent">Articulate</span>
-                      <span className="px-4 py-1.5 rounded-full border border-accent/20 text-xs font-bold bg-white/5 text-accent">Elite</span>
+                <div className="w-16 h-0.5 bg-accent/20 relative z-10 mt-2"></div>
+                <div className="relative z-10 overflow-hidden">
+                   <div className="text-accent/50 text-[9px] font-black uppercase tracking-[0.2em] mb-6">Tone of Voice</div>
+                   <div className="flex flex-col gap-3">
+                      <div className="flex items-center gap-3 group/item">
+                         <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse"></div>
+                         <span className="text-sm font-bold tracking-wide text-secondary/90 group-hover/item:text-accent transition-colors">Sophisticated & Elite</span>
+                      </div>
+                      <div className="flex items-center gap-3 group/item">
+                         <div className="w-1.5 h-1.5 rounded-full bg-accent/40"></div>
+                         <span className="text-sm font-bold tracking-wide text-secondary/70 group-hover/item:text-accent transition-colors">Articulate & Poised</span>
+                      </div>
+                      <div className="flex items-center gap-3 group/item">
+                         <div className="w-1.5 h-1.5 rounded-full bg-accent/40"></div>
+                         <span className="text-sm font-bold tracking-wide text-secondary/70 group-hover/item:text-accent transition-colors">Minimalist Elegance</span>
+                      </div>
                    </div>
                 </div>
                 <div className="mt-auto relative z-10">
-                  <button className="btn btn-primary w-full py-3 shadow-lg group-hover:shadow-glow transition-all">Export Brand Deck</button>
+                  <button className="btn btn-primary w-full py-4 shadow-xl group-hover:shadow-glow transition-all duration-500 font-bold uppercase tracking-[0.2em] text-[10px]">
+                    Download brand deck
+                  </button>
                 </div>
              </div>
-          </div>
+          </motion.div>
          
       </div>
 
-      <div className="mt-8">
+      <motion.div variants={itemVariants} className="mt-8">
         <SocialFeedPreview brandData={brandData} />
-      </div>
+      </motion.div>
 
-    </div>
+    </motion.div>
   );
 };
 

@@ -20,8 +20,8 @@ const PROXY_URL = '/api/generate/image';
 
 // SDXL model versions on Replicate
 const MODELS = {
-  'sdxl':       'stability-ai/sdxl:7762fd07cf82c948538e41f63f77d685e02b063e37291fae01d237f97508d1',
-  'sdxl-turbo': 'stability-ai/sdxl:da77bc59ee60423279fd632efb4795ab731d9e3ca9705ef3341091fb989b7eaf',
+  'sdxl':       '7762fd07cf82c948538e41f63f77d685e02b063e37291fae01d237f97508d1',
+  'sdxl-turbo': 'da77bc59ee60423279fd632efb4795ab731d9e3ca9705ef3341091fb989b7eaf',
 };
 
 const apiToken  = import.meta.env.VITE_REPLICATE_API_TOKEN;
@@ -148,7 +148,10 @@ export const generateImage = async (prompt, options = {}) => {
     const url = useProxy
       ? await callProxy(prompt, options)
       : await callReplicateDirect(prompt, options);
-    console.log(`[SDXL] Image generated: ${url}`);
+    
+    if (!url) throw new Error("API returned empty output");
+    
+    console.log(`[SDXL] Success! Image URL: ${url}`);
     return url;
   } catch (err) {
     console.error(`[SDXL] Generation failed: ${err.message}. Falling back to placeholder.`);

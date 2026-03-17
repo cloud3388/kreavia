@@ -4,6 +4,7 @@ import { LayoutDashboard, Palette, Image as ImageIcon, Sparkles, LineChart, Sett
 import { motion, AnimatePresence } from 'framer-motion';
 import UpgradeModal from '../UpgradeModal';
 import { useAuth } from '../../context/AuthContext';
+import logo from '../../assets/logo.png';
 
 const DashboardLayout = () => {
   const location = useLocation();
@@ -36,8 +37,16 @@ const DashboardLayout = () => {
       <aside className="hidden md:flex w-[240px] border-r border-light flex-col bg-surface z-20 shrink-0 shadow-lg">
         <div className="h-[72px] flex items-center px-6 border-b border-light shrink-0 bg-surface">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-secondary font-headline font-bold text-lg shadow-sm group-hover:shadow-glow transition-shadow">
-              K
+            <div 
+              className="flex items-center justify-center cursor-pointer group" 
+              onClick={() => navigate('/')}
+            >
+              <img 
+                src={logo} 
+                alt="Kreavia Logo" 
+                className="navbar-logo group-hover:scale-110 transition-transform duration-500" 
+                style={{ height: '22px', width: '22px', objectFit: 'contain' }}
+              />
             </div>
             <Link to="/" className="font-headline text-xl font-bold tracking-tight text-primary">Kreavia.ai</Link>
           </div>
@@ -87,8 +96,13 @@ const DashboardLayout = () => {
         <header className="h-[72px] border-b border-light flex items-center justify-between px-4 md:px-8 bg-surface/80 backdrop-blur-md shrink-0 z-30 sticky top-0 shadow-sm">
            
            {/* Mobile Logo */}
-           <div className="flex md:hidden items-center gap-3">
-             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-secondary font-headline font-bold text-lg">K</div>
+           <div className="flex md:hidden items-center gap-3" onClick={() => navigate('/')}>
+             <img 
+                src={logo} 
+                alt="Kreavia Logo" 
+                className="navbar-logo" 
+                style={{ height: '20px', width: '20px', objectFit: 'contain' }}
+              />
              <span className="font-headline text-lg font-bold tracking-tight text-primary">Kreavia.ai</span>
            </div>
 
