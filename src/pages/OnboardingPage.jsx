@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Sparkles, Wand2, Dumbbell, Plane, Shirt, Gamepad2, Briefcase, Coffee, Check } from 'lucide-react';
-import { AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { buildBrandDNA } from '../ai/brandDNA';
 import { generateBrandKit } from '../ai/pipeline';
 

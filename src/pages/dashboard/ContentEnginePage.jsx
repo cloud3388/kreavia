@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Lightbulb, MessageSquare, Hash, Copy, CheckCircle, RefreshCcw, Sparkles, Quote } from 'lucide-react';
 import { generateContentIdeas, generateCaptions, generateHashtags } from '../../services/aiService';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const ContentEnginePage = () => {
   const [activeTab, setActiveTab] = useState('ideas');

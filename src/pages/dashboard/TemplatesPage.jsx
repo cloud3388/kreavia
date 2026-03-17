@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Download, Play, Layout, Phone, X, Type, Image as ImageIcon, Palette, Copy, Shapes, Sparkles, Loader2, Wand2 } from 'lucide-react';
-import { AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { generateImage } from '../../services/sdxlService';
 
 const TemplatesPage = () => {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User, CreditCard, Bell, Shield, LogOut, Palette, Type, Save, RotateCcw, Check, Sparkles } from 'lucide-react';
 import { generateBrandKit as generateBrandIdentity } from '../../ai/pipeline';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const SettingsPage = () => {
   const [brandData, setBrandData] = useState(null);

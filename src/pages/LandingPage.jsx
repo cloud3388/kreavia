@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Sparkles, Palette, Type, Layout, Zap, CheckCircle2 } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const LandingPage = () => {
   return (
