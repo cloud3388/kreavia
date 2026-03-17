@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Palette, Type, Image as ImageIcon, Copy, CheckCircle, Sparkles, AlertCircle } from 'lucide-react';
 import { generateBrandIdentity } from '../../services/aiService';
+import { motion, AnimatePresence } from 'framer-motion';
 import SocialFeedPreview from '../../components/dashboard/SocialFeedPreview';
 
 const BrandKitPage = () => {
