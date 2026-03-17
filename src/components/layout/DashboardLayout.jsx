@@ -28,7 +28,7 @@ const DashboardLayout = () => {
   };
 
   return (
-    <div className="flex h-[100dvh] bg-main overflow-hidden text-secondary selection:bg-accent/20">
+    <div className="flex h-[100dvh] bg-main overflow-hidden text-primary selection:bg-accent/20">
       
       {/* Upgrade Modal */}
       <UpgradeModal isOpen={upgradeOpen} onClose={() => setUpgradeOpen(false)} />

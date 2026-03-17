@@ -9,64 +9,87 @@
  *   4. Returns result_data to the frontend
  */
 import { supabase, isMockMode } from '../lib/supabase';
+import { generateImage } from './sdxlService';
 
 // ──────────────────────────────────────────
 // Internal helper — persist generation record
 // ──────────────────────────────────────────
 const persistGeneration = async ({ userId, projectId, generationType, prompt, resultData, model, creditsUsed = 1 }) => {
   if (isMockMode || !supabase) return;
-  await supabase.from('ai_generations').insert({
-    user_id: userId,
-    project_id: projectId,
-    generation_type: generationType,
-    prompt,
-    result_data: resultData,
-    model,
-    credits_used: creditsUsed,
-  });
-  await supabase.from('ai_usage').insert({
-    user_id: userId,
-    generation_type: generationType,
-    credits_used: creditsUsed,
-  });
+  try {
+    await supabase.from('ai_generations').insert({
+      user_id: userId,
+      project_id: projectId,
+      generation_type: generationType,
+      prompt,
+      result_data: resultData,
+      model,
+      credits_used: creditsUsed,
+    });
+  } catch (err) {
+    console.warn('[AI Service] Persistence failed (non-critical):', err.message);
+  }
 };
 
 // ──────────────────────────────────────────
 // Brand Identity Generation
 // ──────────────────────────────────────────
 export const generateBrandIdentity = async (userInputs = {}, context = {}) => {
-  const result = {
-    colors: {
-      primary:   '#0F0F0F',
-      secondary: '#F5F5F5',
-      accent:    '#C6A96B',
-      highlight: '#6B7CFF',
-    },
-    typography: {
-      headline: 'Playfair Display',
-      body:     'Inter',
-      ui:       'Satoshi',
-    },
-    logos: [
-      { type: 'Monogram', url: 'https://placehold.co/400x400/0F0F0F/C6A96B?text=B&font=playfair', style: 'monogram' },
-      { type: 'Minimal Symbol', url: 'https://placehold.co/400x400/0F0F0F/F5F5F5?text=✧&font=inter', style: 'symbol' },
-      { type: 'Wordmark', url: 'https://placehold.co/400x200/F5F5F5/0F0F0F?text=BRAND&font=playfair', style: 'wordmark' },
-    ],
-    brandScore:     92,
-    brandArchetype: 'The Luxury Minimalist',
-    brandVoice:     'Sophisticated, minimal, quietly confident',
-  };
+  const brandName = userInputs.brandName || 'Kreavia';
+  const industry  = userInputs.industry || 'Tech';
+  const style     = userInputs.style || 'Minimalist';
 
-  await persistGeneration({
-    ...context,
-    generationType: 'brand_identity',
-    prompt: JSON.stringify(userInputs),
-    resultData: result,
-    model: 'mock-v1',
-    creditsUsed: 1,
-  });
+  console.log(`[AI Service] Generating brand identity for: ${brandName}`);
 
-  return new Promise(resolve => setTimeout(() => resolve(result), 1500));
+  // 1. Generate real AI logos
+  const logoPrompts = [
+    `Luxurious high-end minimalist vector logo for "${brandName}", ${industry}, ${style} style, white background, high contrast, clean lines`,
+    `Minimalist abstract symbol for "${brandName}", ${industry}, ${style}, geometric, sophisticated, vector style`,
+  ];
+
+  try {
+    const [logo1, logo2] = await Promise.all([
+      generateImage(logoPrompts[0]),
+      generateImage(logoPrompts[1]),
+    ]);
+
+    const result = {
+      brandName,
+      industry,
+      colors: {
+        primary:   '#3E2723', // Espresso
+        secondary: '#FDF8F1', // Cream
+        accent:    '#8D6E63', // Caramel
+        highlight: '#D7CCC8', // Latte
+      },
+      typography: {
+        headline: 'Playfair Display',
+        body:     'Inter',
+        ui:       'Satoshi',
+      },
+      logos: [
+        { type: 'Primary Logo', url: logo1, style: 'vector' },
+        { type: 'Minimal Symbol', url: logo2, style: 'symbol' },
+      ],
+      brandScore:     95,
+      brandArchetype: 'The Visionary',
+      brandVoice:     'Sophisticated, minimal, quietly confident',
+    };
+
+    await persistGeneration({
+      ...context,
+      generationType: 'brand_identity',
+      prompt: JSON.stringify(userInputs),
+      resultData: result,
+      model: 'sdxl-turbo',
+      creditsUsed: 1,
+    });
+
+    return result;
+  } catch (err) {
+    console.error('[AI Service] Generation failed:', err);
+    throw err;
+  }
 };
 
 // ──────────────────────────────────────────
