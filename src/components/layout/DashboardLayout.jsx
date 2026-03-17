@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Palette, Image as ImageIcon, Sparkles, LineChart, Settings, Search, Bell, Zap, LogOut, User as UserIcon } from 'lucide-react';
-import { AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import UpgradeModal from '../UpgradeModal';
 import { useAuth } from '../../context/AuthContext';
 

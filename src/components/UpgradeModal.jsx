@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { X, Zap, Check, Sparkles, Star, CreditCard, Lock, ArrowLeft, CheckCircle2 } from 'lucide-react';
 
 const plans = [
