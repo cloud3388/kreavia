@@ -238,7 +238,7 @@ const SettingsPage = () => {
                     </select>
                  </div>
                  <div className="mt-2 p-4 bg-primary/20 rounded-lg border border-light/50">
-                    <div style={{ fontFamily: localFonts.headline }} className="text-lg text-white mb-1">Previewing Headline</div>
+                    <div style={{ fontFamily: localFonts.headline }} className="text-lg text-primary mb-1">Previewing Headline</div>
                     <div style={{ fontFamily: localFonts.body }} className="text-xs text-muted leading-relaxed">This is how your brand body copy will look across all templates and mockups.</div>
                  </div>
               </div>

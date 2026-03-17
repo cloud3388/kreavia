@@ -66,7 +66,7 @@ const CheckoutForm = ({ plan, onBack, onSuccess }) => {
       exit={{ opacity: 0, x: -40 }}
       className="flex flex-col gap-6"
     >
-      <button onClick={onBack} className="flex items-center gap-2 text-muted hover:text-white text-sm font-ui transition-colors w-max">
+      <button onClick={onBack} className="flex items-center gap-2 text-muted hover:text-primary text-sm font-ui transition-colors w-max">
         <ArrowLeft size={16} /> Back to plans
       </button>
 
@@ -76,7 +76,7 @@ const CheckoutForm = ({ plan, onBack, onSuccess }) => {
           <div className="text-xs font-ui uppercase tracking-widest text-accent font-bold mb-1">{plan.name} Plan</div>
           <div className="text-sm text-muted">Billed monthly · Cancel anytime</div>
         </div>
-        <div className="text-3xl font-headline text-white">{plan.price}<span className="text-base text-muted font-ui">/mo</span></div>
+        <div className="text-3xl font-headline text-primary">{plan.price}<span className="text-base text-muted font-ui">/mo</span></div>
       </div>
 
       {/* Payment Form */}
@@ -88,7 +88,7 @@ const CheckoutForm = ({ plan, onBack, onSuccess }) => {
             value={form.name}
             onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
             placeholder="Jane Doe"
-            className="w-full bg-main border border-light/50 rounded-xl px-4 py-3 text-sm font-ui text-white placeholder:text-muted/50 outline-none focus:border-accent transition-colors"
+            className="w-full bg-surface border border-light rounded-xl px-4 py-3 text-sm font-ui text-primary placeholder:text-muted/50 outline-none focus:border-accent transition-colors"
           />
         </div>
 
@@ -100,7 +100,7 @@ const CheckoutForm = ({ plan, onBack, onSuccess }) => {
               value={form.card}
               onChange={e => setForm(p => ({ ...p, card: formatCard(e.target.value) }))}
               placeholder="1234 5678 9012 3456"
-              className="w-full bg-main border border-light/50 rounded-xl px-4 py-3 pr-12 text-sm font-ui text-white placeholder:text-muted/50 outline-none focus:border-accent transition-colors"
+              className="w-full bg-surface border border-light rounded-xl px-4 py-3 pr-12 text-sm font-ui text-primary placeholder:text-muted/50 outline-none focus:border-accent transition-colors"
             />
             <CreditCard size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-muted" />
           </div>
@@ -114,7 +114,7 @@ const CheckoutForm = ({ plan, onBack, onSuccess }) => {
               value={form.expiry}
               onChange={e => setForm(p => ({ ...p, expiry: formatExpiry(e.target.value) }))}
               placeholder="MM/YY"
-              className="w-full bg-main border border-light/50 rounded-xl px-4 py-3 text-sm font-ui text-white placeholder:text-muted/50 outline-none focus:border-accent transition-colors"
+              className="w-full bg-surface border border-light rounded-xl px-4 py-3 text-sm font-ui text-primary placeholder:text-muted/50 outline-none focus:border-accent transition-colors"
             />
           </div>
           <div>
@@ -124,7 +124,7 @@ const CheckoutForm = ({ plan, onBack, onSuccess }) => {
               value={form.cvc}
               onChange={e => setForm(p => ({ ...p, cvc: e.target.value.replace(/\D/g, '').substring(0, 3) }))}
               placeholder="123"
-              className="w-full bg-main border border-light/50 rounded-xl px-4 py-3 text-sm font-ui text-white placeholder:text-muted/50 outline-none focus:border-accent transition-colors"
+              className="w-full bg-surface border border-light rounded-xl px-4 py-3 text-sm font-ui text-primary placeholder:text-muted/50 outline-none focus:border-accent transition-colors"
             />
           </div>
         </div>
@@ -165,7 +165,7 @@ const SuccessScreen = ({ plan, onClose }) => (
       <CheckCircle2 size={48} className="text-accent" />
     </motion.div>
     <div>
-      <h3 className="text-3xl font-headline text-white mb-3">Welcome to {plan.name}! 🎉</h3>
+      <h3 className="text-3xl font-headline text-primary mb-3">Welcome to {plan.name}! 🎉</h3>
       <p className="text-muted font-ui">Your plan has been upgraded. All {plan.name} features are now unlocked.</p>
     </div>
     <div className="flex flex-col gap-3 w-full max-w-xs">
@@ -229,7 +229,7 @@ const UpgradeModal = ({ isOpen, onClose }) => {
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-accent/10 rounded-lg"><Sparkles size={20} className="text-accent" /></div>
                     <div>
-                      <h2 className="text-xl font-headline text-white">
+                      <h2 className="text-xl font-headline text-primary">
                         {screen === 'plans' ? 'Upgrade Your Plan' : 'Checkout'}
                       </h2>
                       <p className="text-muted text-xs mt-0.5">
@@ -237,7 +237,7 @@ const UpgradeModal = ({ isOpen, onClose }) => {
                       </p>
                     </div>
                   </div>
-                  <button onClick={handleClose} className="p-2 rounded-full hover:bg-white/10 text-muted hover:text-white transition-colors">
+                  <button onClick={handleClose} className="p-2 rounded-full hover:bg-black/5 text-muted hover:text-primary transition-colors">
                     <X size={20} />
                   </button>
                 </div>
@@ -266,7 +266,7 @@ const UpgradeModal = ({ isOpen, onClose }) => {
                         <div>
                           <div className={`text-xs font-ui font-bold uppercase tracking-widest mb-2 ${plan.highlighted ? 'text-accent' : 'text-muted'}`}>{plan.name}</div>
                           <div className="flex items-end gap-1">
-                            <span className="font-headline text-4xl text-white">{plan.price}</span>
+                            <span className="font-headline text-4xl text-primary">{plan.price}</span>
                             <span className="text-muted font-ui text-sm mb-1">{plan.period}</span>
                           </div>
                           <p className="text-muted text-sm mt-1">{plan.description}</p>
@@ -276,7 +276,7 @@ const UpgradeModal = ({ isOpen, onClose }) => {
                           {plan.features.map((feature) => (
                             <li key={feature} className="flex items-start gap-2.5 text-sm font-ui">
                               <Check size={14} className={`mt-0.5 shrink-0 ${plan.highlighted ? 'text-accent' : 'text-muted'}`} />
-                              <span className={plan.highlighted ? 'text-secondary' : 'text-secondary/70'}>{feature}</span>
+                              <span className="text-primary">{feature}</span>
                             </li>
                           ))}
                         </ul>
@@ -285,10 +285,10 @@ const UpgradeModal = ({ isOpen, onClose }) => {
                           onClick={() => handlePlanCta(plan)}
                           className={`mt-2 h-11 rounded-xl font-ui font-bold text-sm w-full flex items-center justify-center gap-2 transition-all ${
                             plan.disabled
-                              ? 'bg-card border border-light/30 text-muted cursor-default'
+                              ? 'bg-surface border border-light text-muted cursor-default shadow-sm'
                               : plan.highlighted
                               ? 'btn btn-primary shadow-glow hover:scale-[1.02]'
-                              : 'btn btn-outline border-white/20 text-white hover:border-accent hover:text-accent'
+                              : 'btn btn-outline border-light text-primary hover:border-accent hover:text-accent shadow-sm'
                           }`}
                         >
                           {plan.highlighted && <Zap size={14} />}

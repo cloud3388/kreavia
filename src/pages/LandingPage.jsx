@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Sparkles, Palette, Type, Layout, Zap, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import logo from '../assets/logo.png';
 
 const LandingPage = () => {
   return (
@@ -85,7 +86,9 @@ const LandingPage = () => {
              >
                 <div className="aspect-[4/5] p-8 flex flex-col justify-center items-center text-center relative overflow-hidden" style={{ backgroundColor: '#F5F5F5' }}>
                    <div className="absolute inset-0 opacity-10 mix-blend-overlay" style={{ backgroundImage: "url('https://grainy-gradients.vercel.app/noise.svg')" }}></div>
-                   <div className="w-16 h-16 rounded-full border border-primary mb-6 flex items-center justify-center font-headline text-2xl text-primary">B</div>
+                   <div className="w-16 h-16 mb-6 flex items-center justify-center">
+                     <img src={logo} alt="Logo" className="w-12 h-12 object-contain" />
+                   </div>
                    <h3 className="font-headline text-4xl text-primary leading-tight">Elevate<br/>Your<br/>Aesthetic</h3>
                    <div className="h-1 w-12 bg-accent mt-8"></div>
                 </div>
@@ -176,7 +179,7 @@ const LandingPage = () => {
             
             <div className="glass-card p-12 bg-primary text-secondary flex flex-col gap-6 relative overflow-hidden" style={{ backgroundColor: '#3E2723' }}>
                <div className="absolute top-0 right-0 p-4">
-                  <span className="bg-accent text-white text-[9px] font-bold px-3 py-1 rounded-full uppercase tracking-widest">Popular</span>
+                  <span className="bg-accent text-secondary text-[9px] font-bold px-3 py-1 rounded-full uppercase tracking-widest">Popular</span>
                </div>
                <div className="text-accent/50 text-[10px] font-bold uppercase tracking-widest">Pro Creator</div>
                <div className="text-5xl font-headline font-bold">$19<span className="text-lg text-accent/50 font-medium">/mo</span></div>

@@ -180,7 +180,7 @@ const BrandKitPage = () => {
                      style={{ backgroundColor: hex || '#3E2723' }}
                    >
                      <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <Copy size={24} className="text-white drop-shadow-md opacity-50" />
+                        <Copy size={24} className="text-secondary drop-shadow-md opacity-50" />
                      </div>
                    </div>
                    <div className="p-4 flex justify-between items-center bg-surface border-t border-light/50">

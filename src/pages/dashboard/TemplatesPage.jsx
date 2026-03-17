@@ -1,20 +1,33 @@
 import React, { useState, useEffect } from 'react';
-import { Download, Play, Layout, Phone, X, Type, Image as ImageIcon, Palette, Copy, Shapes, Sparkles, Loader2, Wand2 } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Download, Layout, X, Type, Image as ImageIcon, Palette, Copy, Shapes, Sparkles, Loader2, Wand2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { generateImage } from '../../services/sdxlService';
+import TemplateRenderer from '../../components/dashboard/TemplateRenderer';
+
+const DEFAULT_BRAND = {
+  brandName: 'Kreavia',
+  brandArchetype: 'The Visionary',
+  colors: { primary: '#1A1A1A', accent: '#C6A96B', highlight: '#F5F5F7', secondary: '#FBFBFD' },
+  typography: { headline: 'Playfair Display', body: 'Inter', ui: 'Satoshi' },
+  logos: [],
+};
 
 const TemplatesPage = () => {
   const [filter, setFilter] = useState('all');
   const [editingTemplate, setEditingTemplate] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedBg, setGeneratedBg] = useState(null);
-  const [brandData, setBrandData] = useState(null);
+  const [brandData, setBrandData] = useState(DEFAULT_BRAND);
+  const [localBrandData, setLocalBrandData] = useState(DEFAULT_BRAND);
+  const [localText, setLocalText] = useState('');
 
   useEffect(() => {
     const savedKit = sessionStorage.getItem('currentBrandKit');
     if (savedKit) {
       try {
-        setBrandData(JSON.parse(savedKit));
+        const parsed = JSON.parse(savedKit);
+        setBrandData({ ...DEFAULT_BRAND, ...parsed, colors: { ...DEFAULT_BRAND.colors, ...(parsed.colors || {}) }, typography: { ...DEFAULT_BRAND.typography, ...(parsed.typography || {}) } });
       } catch (err) {
         console.error('Failed to parse brand kit:', err);
       }
@@ -42,14 +55,14 @@ const TemplatesPage = () => {
   };
 
   const templates = [
-    { id: 1, type: 'instagram', title: 'Quote Post', image: `https://placehold.co/400x500/0F0F0F/${(brandData?.colors?.accent || 'C6A96B').replace('#','')}/?text=QUOTE&font=playfair` },
-    { id: 2, type: 'reels', title: 'Reel Cover A', image: `https://placehold.co/400x700/0F0F0F/${(brandData?.colors?.accent || 'C6A96B').replace('#','')}/?text=COVER&font=satoshi` },
-    { id: 3, type: 'story', title: 'Story Highlight', image: `https://placehold.co/400x700/${(brandData?.colors?.secondary || 'F5F5F5').replace('#','')}/0F0F0F/?text=STORY&font=inter` },
-    { id: 4, type: 'instagram', title: 'Carousel Slide 1', image: `https://placehold.co/400x400/0F0F0F/${(brandData?.colors?.accent || '6B7CFF').replace('#','')}/?text=SLIDE_1&font=playfair` },
-    { id: 5, type: 'youtube', title: 'Thumbnail Main', image: `https://placehold.co/600x338/${(brandData?.colors?.accent || 'C6A96B').replace('#','')}/0F0F0F/?text=THUMBNAIL&font=playfair` },
-    { id: 6, type: 'reels', title: 'Reel Cover B', image: `https://placehold.co/400x700/0F0F0F/${(brandData?.colors?.accent || 'F5F5F5').replace('#','')}/?text=VLOG&font=satoshi` },
-    { id: 7, type: 'instagram', title: 'Announcement', image: `https://placehold.co/400x400/${(brandData?.colors?.accent || '6B7CFF').replace('#','')}/0F0F0F/?text=NEW&font=playfair` },
-    { id: 8, type: 'story', title: 'Q&A Template', image: `https://placehold.co/400x700/0F0F0F/${(brandData?.colors?.accent || 'C6A96B').replace('#','')}/?text=Q%26A&font=satoshi` },
+    { id: 1, type: 'instagram', title: 'Quote Post', renderType: 'quote', text: 'Elegance is the only beauty that never fades.' },
+    { id: 2, type: 'reels', title: 'Reel Cover A', renderType: 'reel_cover', text: 'CREATING THE FUTURE' },
+    { id: 3, type: 'story', title: 'Story Highlight', renderType: 'story', text: 'VIBE CHECK' },
+    { id: 4, type: 'instagram', title: 'Carousel Slide 1', renderType: 'carousel', text: '3 Tips for Minimalist Living' },
+    { id: 5, type: 'reels', title: 'Reel Cover B', renderType: 'reel_cover', text: 'A DAY IN THE LIFE' },
+    { id: 6, type: 'instagram', title: 'Announcement', renderType: 'quote', text: 'BIG THINGS COMING SOON' },
+    { id: 7, type: 'story', title: 'Q&A Template', renderType: 'story', text: 'ASK ANYTHING' },
+    { id: 8, type: 'instagram', title: 'Tip of the Day', renderType: 'carousel', text: 'How to Build Consistency' },
   ];
 
   const filtered = filter === 'all' ? templates : templates.filter(t => t.type === filter);
@@ -82,20 +95,28 @@ const TemplatesPage = () => {
                initial={{ opacity: 0, y: 20 }}
                animate={{ opacity: 1, y: 0 }}
                key={template.id} 
-               className="group relative rounded-3xl overflow-hidden border border-light bg-surface hover:border-accent/40 transition-all flex flex-col w-full h-[400px] shadow-sm hover:shadow-xl hover:-translate-y-1"
+               className="group relative rounded-3xl overflow-hidden border border-light bg-surface hover:border-accent/40 transition-all flex flex-col w-full h-[450px] shadow-sm hover:shadow-xl hover:-translate-y-1"
              >
-                <div className="flex-1 relative overflow-hidden bg-secondary/30 flex items-center justify-center p-10">
-                   {/* Abstract background flare */}
-                   <div className="absolute inset-0 bg-gradient-to-tr from-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                   
-                   <img src={template.image} alt={template.title} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-700 brightness-95 group-hover:brightness-100" />
+                <div className="flex-1 relative overflow-hidden bg-highlight/30 flex items-center justify-center p-8">
+                   <div className="w-full h-full shadow-2xl rounded-lg overflow-hidden scale-[0.85] group-hover:scale-100 transition-transform duration-700 origin-center">
+                      <TemplateRenderer 
+                        type={template.renderType} 
+                        brandData={brandData} 
+                        text={template.text} 
+                      />
+                   </div>
                    
                    {/* Hover Actions */}
-                   <div className="absolute inset-0 bg-primary/95 opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col items-center justify-center gap-4 backdrop-blur-md">
-                      <button onClick={() => { setEditingTemplate(template); setGeneratedBg(null); }} className="btn btn-primary text-[10px] font-black uppercase tracking-widest w-2/3 h-12 shadow-glow flex gap-2 items-center justify-center text-white">
+                   <div className="absolute inset-0 bg-primary/80 opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col items-center justify-center gap-4 backdrop-blur-md">
+                      <button onClick={() => { 
+                        setEditingTemplate(template); 
+                        setGeneratedBg(null); 
+                        setLocalBrandData(brandData);
+                        setLocalText(template.text);
+                      }} className="btn btn-primary text-[10px] font-black uppercase tracking-widest w-2/3 h-12 shadow-glow flex gap-2 items-center justify-center text-secondary">
                         <Palette size={14} /> Open Editor
                       </button>
-                      <button className="btn btn-outline border-white/20 text-white hover:border-accent hover:text-accent text-[10px] font-black uppercase tracking-widest w-2/3 h-12 flex gap-2 items-center justify-center">
+                      <button className="btn btn-outline border-primary/20 text-primary hover:border-accent hover:text-accent text-[10px] font-black uppercase tracking-widest w-2/3 h-12 flex gap-2 items-center justify-center">
                         <Copy size={14} /> Duplicate
                       </button>
                    </div>
@@ -111,33 +132,34 @@ const TemplatesPage = () => {
                 </div>
              </motion.div>
          )) : (
-           <div className="col-span-full py-20 text-center flex flex-col items-center gap-6">
-              <div className="w-20 h-20 rounded-full bg-accent/10 flex items-center justify-center text-accent">
-                <Layout size={40} />
-              </div>
-              <div className="max-w-md">
-                <h3 className="text-2xl font-headline font-bold mb-2">No templates found</h3>
-                <p className="text-muted">Try adjusting your filters or complete the onboarding to generate custom templates.</p>
-              </div>
-           </div>
+            <div className="col-span-full py-20 text-center flex flex-col items-center gap-6">
+               <div className="w-20 h-20 rounded-full bg-accent/10 flex items-center justify-center text-accent">
+                 <Layout size={40} />
+               </div>
+               <div className="max-w-md">
+                 <h3 className="text-2xl font-headline font-bold mb-2">No templates found</h3>
+                 <p className="text-muted">Try adjusting your filters or complete the onboarding to generate custom templates.</p>
+               </div>
+            </div>
          )}
        </div>
 
        {/* Editor Modal */}
-       <AnimatePresence>
-         {editingTemplate && (
-           <motion.div 
-             initial={{ opacity: 0 }}
-             animate={{ opacity: 1 }}
-             exit={{ opacity: 0 }}
-             className="fixed inset-0 z-[60] flex items-center justify-center p-0 md:p-10 bg-black/95 backdrop-blur-xl"
-           >
+       {createPortal(
+         <AnimatePresence>
+           {editingTemplate && (
+             <motion.div 
+               initial={{ opacity: 0 }}
+               animate={{ opacity: 1 }}
+               exit={{ opacity: 0 }}
+               className="fixed inset-0 z-[200] flex items-center justify-center p-0 md:p-10 bg-black/90 backdrop-blur-xl"
+             >
               <motion.div 
                 initial={{ opacity: 0, y: 50, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 20, scale: 0.95 }}
                 transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                className="w-full h-full xl:max-w-[1500px] xl:max-h-[900px] bg-secondary border border-light rounded-none md:rounded-3xl flex flex-col md:flex-row overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.5)] relative"
+                className="w-full h-full xl:max-w-[1500px] xl:max-h-[900px] bg-secondary border border-light rounded-none md:rounded-3xl flex flex-col md:flex-row overflow-hidden shadow-2xl relative"
               >
                  
                  {/* Left Sidebar */}
@@ -180,52 +202,40 @@ const TemplatesPage = () => {
                  </div>
 
                  {/* Center Canvas */}
-                 <div className="flex-1 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] bg-[#0A0A0A] flex flex-col relative overflow-hidden">
-                    <div className="absolute top-0 inset-x-0 h-[80px] bg-gradient-to-b from-black/60 to-transparent flex items-center justify-between px-10 z-20 pointer-events-none">
-                       <div className="pointer-events-auto">
-                          <span className="font-black text-[10px] tracking-widest uppercase text-muted bg-primary/40 px-4 py-2 rounded-full border border-white/10 backdrop-blur-xl">Cloud Synced</span>
+                 <div className="flex-1 bg-highlight/50 flex flex-col relative overflow-hidden">
+                    <div className="absolute top-0 inset-x-0 h-[80px] flex items-center justify-between px-10 z-20 pointer-events-none">
+                       <div className="pointer-events-auto mt-10">
+                          <span className="font-black text-[10px] tracking-widest uppercase text-muted bg-surface/80 px-4 py-2 rounded-full border border-light backdrop-blur-xl shadow-sm">Cloud Synced</span>
                        </div>
                     </div>
 
-                    <div className="absolute inset-0 bg-black/40 mix-blend-overlay pointer-events-none"></div>
-                    
                     <div className="flex-1 flex items-center justify-center p-10 lg:p-20 relative overflow-auto pt-24 md:pt-10">
-                       <div className="relative w-full max-w-[50vh] lg:max-w-[70vh] aspect-[4/5] bg-primary shadow-[0_0_150px_rgba(0,0,0,0.8)] border border-white/5 group">
+                       <div className="relative w-full max-w-[50vh] lg:max-w-[70vh] aspect-[4/5] bg-white shadow-2xl border border-light group overflow-hidden rounded-xl">
                          <AnimatePresence>
                            {isGenerating && (
                              <motion.div 
-                               initial={{ opacity: 0 }}
-                               animate={{ opacity: 1 }}
-                               exit={{ opacity: 0 }}
-                               className="absolute inset-0 z-30 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center gap-6"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="absolute inset-0 z-30 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center gap-6"
                              >
                                 <Loader2 className="w-16 h-16 text-accent animate-spin" />
-                                <span className="text-white font-black text-[12px] tracking-[0.3em] uppercase animate-pulse">Capturing Infinite Essence...</span>
+                                <span className="text-secondary font-black text-[12px] tracking-[0.3em] uppercase animate-pulse">Capturing Infinite Essence...</span>
                              </motion.div>
                            )}
                          </AnimatePresence>
 
-                         <div className="absolute -inset-10 bg-gradient-to-br from-accent/30 to-highlight/30 opacity-0 group-hover:opacity-40 blur-[80px] transition-opacity duration-1000 -z-10 pointer-events-none"></div>
-                         
-                         <img 
-                            src={generatedBg || editingTemplate.image.replace('400x500', '1080x1080').replace('400x700', '1080x1920')} 
-                            alt="Canvas" 
-                            className={`w-full h-full object-cover transition-opacity duration-1000 ${isGenerating ? 'opacity-20' : 'opacity-100'}`} 
-                         />
-                         
-                         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center text-center p-16 pointer-events-none">
-                            <h3 className="text-white font-headline text-5xl md:text-7xl uppercase tracking-tighter leading-none drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)] mb-6" 
-                                style={{ fontFamily: brandData?.typography?.headline || 'inherit' }}>
-                                Pure<br/>Elegance
-                            </h3>
-                            <div className="w-20 h-1.5 bg-accent rounded-full mb-8 shadow-glow"></div>
-                            <p className="text-white/90 font-body text-base md:text-lg max-w-sm font-medium tracking-wide drop-shadow-md" 
-                               style={{ fontFamily: brandData?.typography?.body || 'inherit' }}>
-                               Sophistication is the ultimate expression of simplicity.
-                            </p>
+                         <div className="w-full h-full relative">
+                            {generatedBg ? (
+                                <img src={generatedBg} alt="AI Generated" className="w-full h-full object-cover" />
+                            ) : (
+                                <TemplateRenderer 
+                                    type={editingTemplate.renderType} 
+                                    brandData={localBrandData} 
+                                    text={localText} 
+                                />
+                            )}
                          </div>
-
-                         <div className="absolute inset-8 border border-white/10 z-0 pointer-events-none"></div>
                        </div>
                     </div>
                  </div>
@@ -256,25 +266,40 @@ const TemplatesPage = () => {
                           <h4 className="text-[11px] font-black uppercase tracking-widest text-muted">Typography Settings</h4>
                           <div className="flex flex-col gap-3">
                              <label className="text-[10px] uppercase tracking-widest font-black text-muted/60 ml-1">Font Family</label>
-                             <select className="input h-12 text-sm bg-secondary border-light text-primary py-0 w-full focus:border-accent font-bold shadow-sm">
-                                <option>{brandData?.typography?.headline || 'Playfair Display'}</option>
-                                <option>{brandData?.typography?.body || 'Inter'}</option>
-                                <option>{brandData?.typography?.ui || 'Satoshi'}</option>
+                             <select 
+                                value={localBrandData.typography?.headline || 'Playfair Display'}
+                                onChange={(e) => setLocalBrandData({...localBrandData, typography: {...localBrandData.typography, headline: e.target.value}})}
+                                className="input h-12 text-sm bg-secondary border-light text-primary py-0 w-full focus:border-accent font-bold shadow-sm"
+                             >
+                                <option value="Playfair Display">Playfair Display</option>
+                                <option value="Inter">Inter</option>
+                                <option value="Satoshi">Satoshi</option>
                              </select>
                           </div>
                           <div className="grid grid-cols-2 gap-6">
                              <div className="flex flex-col gap-3">
-                                <label className="text-[10px] uppercase tracking-widest font-black text-muted/60 ml-1">Magnitude</label>
-                                <div className="flex items-center bg-secondary border border-light rounded-xl overflow-hidden focus-within:border-accent shadow-sm">
-                                   <input type="number" defaultValue={72} className="w-full bg-transparent border-none text-primary text-sm px-4 py-3 outline-none font-bold" />
+                                <label className="text-[10px] uppercase tracking-widest font-black text-muted/60 ml-1">Content</label>
+                                <div className="flex items-start bg-secondary border border-light rounded-xl overflow-hidden focus-within:border-accent shadow-sm">
+                                   <textarea 
+                                     value={localText}
+                                     onChange={(e) => setLocalText(e.target.value)}
+                                     rows={3}
+                                     className="w-full bg-transparent border-none text-primary text-sm px-4 py-3 outline-none font-bold resize-none custom-scrollbar" 
+                                   />
                                 </div>
                              </div>
                              <div className="flex flex-col gap-3">
                                 <label className="text-[10px] uppercase tracking-widest font-black text-muted/60 ml-1">Presence</label>
-                                <div className="flex items-center gap-3 bg-secondary border border-light rounded-xl p-3 cursor-pointer border-accent shadow-sm">
-                                   <div className="w-6 h-6 rounded-md shadow-inner border border-black/10" style={{ backgroundColor: brandData?.colors?.accent || '#C6A96B' }}></div>
-                                   <span className="text-xs font-black uppercase text-primary">{brandData?.colors?.accent || '#C6A96B'}</span>
-                                </div>
+                                <label className="flex items-center gap-3 bg-secondary border border-light rounded-xl p-3 cursor-pointer border-accent shadow-sm">
+                                   <input 
+                                     type="color" 
+                                     value={localBrandData.colors?.accent || '#C6A96B'}
+                                     onChange={(e) => setLocalBrandData({...localBrandData, colors: {...localBrandData.colors, accent: e.target.value}})}
+                                     className="sr-only"
+                                   />
+                                   <div className="w-6 h-6 rounded-md shadow-inner border border-black/10" style={{ backgroundColor: localBrandData.colors?.accent || '#C6A96B' }}></div>
+                                   <span className="text-xs font-black uppercase text-primary text-ellipsis overflow-hidden whitespace-nowrap">{localBrandData.colors?.accent || '#C6A96B'}</span>
+                                </label>
                              </div>
                           </div>
                        </div>
@@ -282,9 +307,9 @@ const TemplatesPage = () => {
                        <div className="flex flex-col gap-6">
                           <h4 className="text-[11px] font-black uppercase tracking-widest text-muted">Quick Aesthetics</h4>
                           <div className="grid grid-cols-2 gap-3">
-                             <button className="px-4 py-3 rounded-xl bg-secondary border border-light text-[10px] font-black uppercase tracking-widest hover:border-accent transition-all shadow-sm">Invert Focus</button>
-                             <button className="px-4 py-3 rounded-xl bg-secondary border border-light text-[10px] font-black uppercase tracking-widest hover:border-accent transition-all shadow-sm">Minimalist</button>
-                             <button className="px-4 py-3 rounded-xl bg-secondary border border-light text-[10px] font-black uppercase tracking-widest hover:border-accent transition-all col-span-2 shadow-sm">Restore Brand Sync</button>
+                             <button onClick={() => setLocalBrandData({...localBrandData, colors: {...localBrandData.colors, primary: localBrandData.colors?.highlight || '#F5F5F7', highlight: localBrandData.colors?.primary || '#1A1A1A'}})} className="px-4 py-3 rounded-xl bg-secondary border border-light text-[10px] font-black uppercase tracking-widest hover:border-accent transition-all shadow-sm">Invert Focus</button>
+                             <button onClick={() => setLocalBrandData({...localBrandData, colors: {...localBrandData.colors, primary: '#000000', accent: '#000000', highlight: '#F1F1F1', secondary: '#FFFFFF'}})} className="px-4 py-3 rounded-xl bg-secondary border border-light text-[10px] font-black uppercase tracking-widest hover:border-accent transition-all shadow-sm">Minimalist</button>
+                             <button onClick={() => { setLocalBrandData(brandData); setLocalText(editingTemplate.text); }} className="px-4 py-3 rounded-xl bg-secondary border border-light text-[10px] font-black uppercase tracking-widest hover:border-accent transition-all col-span-2 shadow-sm">Restore Brand Sync</button>
                           </div>
                        </div>
                     </div>
@@ -292,15 +317,17 @@ const TemplatesPage = () => {
                  
                  <button 
                    onClick={() => setEditingTemplate(null)} 
-                   className="absolute top-6 right-6 md:hidden z-[70] p-4 bg-black/90 rounded-full text-white backdrop-blur-xl shadow-2xl border border-white/10"
+                   className="absolute top-6 right-6 md:hidden z-[70] p-4 bg-surface/90 rounded-full text-primary backdrop-blur-xl shadow-2xl border border-light"
                  >
                    <X size={24} />
                  </button>
 
               </motion.div>
-           </motion.div>
-         )}
-       </AnimatePresence>
+             </motion.div>
+           )}
+         </AnimatePresence>,
+         document.body
+       )}
     </div>
   );
 };

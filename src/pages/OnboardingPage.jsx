@@ -45,7 +45,7 @@ const LoadingScreen = ({ currentStep, currentLabel }) => {
                        {isComplete && <Check size={14} />}
                        {isCurrent && <div className="w-3 h-3 rounded-full bg-accent animate-pulse" />}
                     </div>
-                    <span className={`font-ui text-sm ${isComplete ? 'text-white font-medium' : isCurrent ? 'text-accent' : 'text-muted'}`}>{text}</span>
+                    <span className={`font-ui text-sm ${isComplete ? 'text-primary font-medium' : isCurrent ? 'text-accent' : 'text-muted'}`}>{text}</span>
                  </motion.div>
                );
             })}
@@ -188,7 +188,7 @@ const OnboardingPage = () => {
                             onClick={() => updateForm('vibe', vibe.toLowerCase())}
                             className={`p-5 rounded-xl border flex items-center justify-between transition-all ${formData.vibe === vibe.toLowerCase() ? 'border-accent bg-accent/5' : 'border-light bg-card hover:border-muted'}`}
                           >
-                            <span className={`font-ui text-lg ${formData.vibe === vibe.toLowerCase() ? 'text-accent font-medium' : 'text-white'}`}>{vibe}</span>
+                            <span className={`font-ui text-lg ${formData.vibe === vibe.toLowerCase() ? 'text-accent font-medium' : 'text-primary'}`}>{vibe}</span>
                             
                             {/* Visual Feed Preview Placeholder Container */}
                             <div className="flex gap-2">
@@ -223,7 +223,7 @@ const OnboardingPage = () => {
                                className={`flex items-center gap-4 w-full px-5 py-4 rounded-xl border text-left transition-all font-ui ${
                                  formData.audience === opt.value
                                    ? 'border-accent bg-accent/10 text-accent'
-                                   : 'border-light bg-card text-white hover:border-muted hover:bg-white/5'
+                                   : 'border-light bg-card text-primary hover:border-muted hover:bg-black/5'
                                }`}
                              >
                                <span className="text-2xl">{opt.emoji}</span>
@@ -242,7 +242,7 @@ const OnboardingPage = () => {
                          <div className="flex flex-col gap-4">
                            <div className="flex justify-between text-base font-ui">
                              <span className="text-muted">Professional</span>
-                             <span className="text-white font-medium">Fun</span>
+                             <span className="text-secondary font-medium">Fun</span>
                            </div>
                            <input type="range" className="w-full accent-accent bg-light h-2 rounded-lg appearance-none cursor-pointer" 
                              min="0" max="100" value={formData.professionalLevel} onChange={(e) => updateForm('professionalLevel', e.target.value)} />
@@ -251,7 +251,7 @@ const OnboardingPage = () => {
                          <div className="flex flex-col gap-4">
                            <div className="flex justify-between text-base font-ui">
                              <span className="text-muted">Minimal</span>
-                             <span className="text-white font-medium">Bold</span>
+                             <span className="text-secondary font-medium">Bold</span>
                            </div>
                            <input type="range" className="w-full accent-accent bg-light h-2 rounded-lg appearance-none cursor-pointer" 
                              min="0" max="100" value={formData.minimalLevel} onChange={(e) => updateForm('minimalLevel', e.target.value)} />
@@ -260,7 +260,7 @@ const OnboardingPage = () => {
                          <div className="flex flex-col gap-4">
                            <div className="flex justify-between text-base font-ui">
                              <span className="text-muted">Luxury</span>
-                             <span className="text-white font-medium">Casual</span>
+                             <span className="text-secondary font-medium">Casual</span>
                            </div>
                            <input type="range" className="w-full accent-accent bg-light h-2 rounded-lg appearance-none cursor-pointer" 
                              min="0" max="100" value={formData.luxuryLevel} onChange={(e) => updateForm('luxuryLevel', e.target.value)} />
@@ -285,7 +285,7 @@ const OnboardingPage = () => {
                   <button 
                     onClick={handleNext} 
                     disabled={isNextDisabled()}
-                    className={`btn btn-primary flex gap-2 h-12 px-8 ${isNextDisabled() ? 'opacity-50 cursor-not-allowed hover:scale-100 hover:shadow-none bg-muted hover:bg-muted text-white/50 border-none' : ''}`}
+                    className={`btn btn-primary flex gap-2 h-12 px-8 ${isNextDisabled() ? 'opacity-50 cursor-not-allowed hover:scale-100 hover:shadow-none bg-muted hover:bg-muted text-primary/50 border-none' : ''}`}
                   >
                     Continue <ArrowRight size={18} />
                   </button>
