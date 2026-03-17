@@ -228,7 +228,7 @@ const BrandKitPage = () => {
                  </div>
   
                  <div className="md:col-span-8 flex flex-col justify-center bg-secondary/30 p-12 rounded-[2rem] border border-accent/5 backdrop-blur-sm relative group shadow-inner">
-                    <div className="absolute inset-0 bg-gradient-to-br from-accent/[0.02] to-transparent pointer-events-none"></div>
+                    <div className="absolute inset-0 bg-accent/5 opacity-5 pointer-events-none" style={{ backgroundColor: 'rgba(141, 110, 99, 0.02)' }}></div>
                     <div className="text-[9px] font-black uppercase tracking-[0.25em] text-accent/60 mb-8 flex items-center gap-2">
                       <div className="w-4 h-px bg-accent/30"></div> Typesetting Specimen
                     </div>
@@ -253,7 +253,7 @@ const BrandKitPage = () => {
                <h3 className="text-2xl font-headline text-primary font-bold">Brand persona</h3>
              </div>
              
-             <div className="glass-card p-10 border-none flex flex-col gap-8 min-h-[340px] bg-primary text-secondary relative overflow-hidden group shadow-[0_20px_40px_rgba(62,39,35,0.15)]">
+             <div className="glass-card p-10 border-none flex flex-col gap-8 min-h-[340px] bg-primary text-secondary relative overflow-hidden group shadow-premium">
                 <div className="absolute top-0 right-0 w-48 h-48 bg-accent/10 blur-[100px] rounded-full -mr-24 -mt-24 group-hover:bg-accent/20 transition-all duration-1000"></div>
                 <div className="relative z-10">
                    <div className="text-accent/50 text-[9px] font-black uppercase tracking-[0.2em] mb-4">Master Archetype</div>
