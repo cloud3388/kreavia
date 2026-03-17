@@ -151,9 +151,11 @@ input, textarea, select {
 .gap-2 { gap: var(--spacing-2); }
 .gap-3 { gap: var(--spacing-3); }
 .gap-4 { gap: var(--spacing-4); }
+.gap-5 { gap: 1.25rem; }
 .gap-6 { gap: var(--spacing-6); }
 .gap-8 { gap: var(--spacing-8); }
-.gap-10 { gap: var(--spacing-10); }
+.gap-10 { gap: 2.5rem; }
+.gap-12 { gap: 3rem; }
 
 .relative { position: relative; }
 .absolute { position: absolute; }
@@ -232,6 +234,7 @@ input, textarea, select {
 .p-8 { padding: var(--spacing-8); }
 .p-10 { padding: 2.5rem; }
 .p-12 { padding: 3rem; }
+.p-16 { padding: 4rem; }
 
 .px-4 { padding-left: var(--spacing-4); padding-right: var(--spacing-4); }
 .px-6 { padding-left: var(--spacing-6); padding-right: var(--spacing-6); }
@@ -346,6 +349,9 @@ input, textarea, select {
 
 .bg-card\/50 { background-color: rgba(255, 253, 251, 0.5); }
 .bg-card\/80 { background-color: rgba(255, 253, 251, 0.8); }
+.bg-secondary\/30 { background-color: rgba(253, 248, 241, 0.3); }
+.bg-secondary\/80 { background-color: rgba(253, 248, 241, 0.8); }
+.bg-surface\/50 { background-color: rgba(255, 255, 255, 0.5); }
 .bg-accent\/5 { background-color: rgba(141, 110, 99, 0.05); }
 .bg-accent\/10 { background-color: rgba(141, 110, 99, 0.1); }
 .bg-accent\/20 { background-color: rgba(141, 110, 99, 0.2); }
