@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Download, Layout, X, Type, Image as ImageIcon, Palette, Copy, Shapes, Sparkles, Loader2, Wand2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { generateImage } from '../../services/sdxlService';
+import { generateImage } from '../../services/nvidiaService';
 import TemplateRenderer from '../../components/dashboard/TemplateRenderer';
 
 const DEFAULT_BRAND = {

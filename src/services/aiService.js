@@ -4,12 +4,12 @@
  * In production, replace each function with a backend API call
  * (e.g. POST /api/generate/brand-identity) that:
  *   1. Deducts credits via userService.deductCredits()
- *   2. Calls OpenAI / Replicate / SDXL
+ *   2. Calls NVIDIA AI API / OpenAI
  *   3. Persists result in ai_generations + ai_usage tables
  *   4. Returns result_data to the frontend
  */
 import { supabase, isMockMode } from '../lib/supabase';
-import { generateImage } from './sdxlService';
+import { generateImage } from './nvidiaService';
 
 // ──────────────────────────────────────────
 // Internal helper — persist generation record
@@ -95,7 +95,7 @@ export const generateBrandIdentity = async (userInputs = {}, context = {}) => {
       generationType: 'brand_identity',
       prompt: JSON.stringify(userInputs),
       resultData: result,
-      model: 'sdxl-turbo',
+      model: 'nvidia-sdxl',
       creditsUsed: 1,
     });
 

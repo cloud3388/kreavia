@@ -39,14 +39,14 @@ import {
   scorePalette,
 } from './validators';
 import { getCached, setCached } from './cache';
-import { generateLogoVariations } from '../services/sdxlService';
+import { generateLogoVariations } from '../services/nvidiaService';
 
 // ──────────────────────────────────────────
 // Model tier assignment
 // ──────────────────────────────────────────
 const MODEL_TIERS = {
   brand_palette:   'gpt-4o',       // text → JSON
-  logo:            'sdxl-turbo',   // text → image
+  logo:            'nvidia-sdxl',  // text → image (NVIDIA AI API)
   font_pairing:    'gpt-4o-mini',  // text → JSON (cheaper)
   template:        'gpt-4o-mini',  // text → JSON
   content_ideas:   'gpt-4o-mini',  // text → JSON
@@ -68,6 +68,7 @@ const CREDITS_PER_GEN = {
 // ──────────────────────────────────────────
 // Mock AI caller (replace with real API client in production)
 // In production: POST /api/ai/generate { type, prompt, model }
+// Image generation handled by nvidiaService.js (NVIDIA AI API)
 // ──────────────────────────────────────────
 const callAI = async (generationType, prompt, model) => {
   console.log(`[Pipeline] Calling ${model} for ${generationType}`);
@@ -104,9 +105,9 @@ const MOCK_IDEAS = [
 ];
 
 const MOCK_LOGOS = [
-  { style: 'monogram', url: 'https://placehold.co/400x400/1A1A1A/C6A96B?text=B&font=playfair', model_used: 'sdxl-turbo' },
-  { style: 'symbol',   url: 'https://placehold.co/400x400/1A1A1A/FBFBFD?text=✧&font=inter',   model_used: 'sdxl-turbo' },
-  { style: 'wordmark', url: 'https://placehold.co/400x200/FBFBFD/1A1A1A?text=BRAND&font=playfair', model_used: 'sdxl-turbo' },
+  { style: 'monogram', url: 'https://placehold.co/400x400/1A1A1A/C6A96B?text=B&font=playfair', model_used: 'nvidia-sdxl' },
+  { style: 'symbol',   url: 'https://placehold.co/400x400/1A1A1A/FBFBFD?text=✧&font=inter',   model_used: 'nvidia-sdxl' },
+  { style: 'wordmark', url: 'https://placehold.co/400x200/FBFBFD/1A1A1A?text=BRAND&font=playfair', model_used: 'nvidia-sdxl' },
 ];
 
 const MOCK_TEMPLATE = {
@@ -168,7 +169,7 @@ const generateLogos = async (dna, palette) => {
 
   try {
     const urls = await generateLogoVariations(prompts, {
-      model:  'sdxl-turbo', // faster; switch to 'sdxl' for higher quality
+      model:  'nvidia-sdxl',
       steps:  30,
       guidanceScale: 8,     // higher = more prompt adherent (better for logos)
     });
@@ -176,7 +177,7 @@ const generateLogos = async (dna, palette) => {
     return logoTypes.map((style, i) => ({
       style,
       url:        urls[i],
-      model_used: 'sdxl-turbo',
+      model_used: 'nvidia-sdxl',
       prompt:     prompts[i],
     }));
   } catch (err) {
