@@ -6,10 +6,11 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/replicate': {
-        target: 'https://api.replicate.com',
+      '/nvidia-api': {
+        target: 'https://ai.api.nvidia.com',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/replicate/, ''),
+        rewrite: (path) => path.replace(/^\/nvidia-api/, ''),
+        secure: true,
       },
     },
   },

@@ -16,7 +16,7 @@
  * Fallback: Returns a placehold.co image URL when no API key is configured.
  */
 
-const NVIDIA_API_URL = 'https://ai.api.nvidia.com/v1/genai/stabilityai/stable-diffusion-xl';
+const NVIDIA_API_URL = '/nvidia-api/v1/genai/stabilityai/stable-diffusion-xl';
 const PROXY_URL      = '/api/generate/image';
 
 const apiKey   = import.meta.env.VITE_NVIDIA_API_KEY;
