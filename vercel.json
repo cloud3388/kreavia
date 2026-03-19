@@ -1,0 +1,16 @@
+{
+  "rewrites": [
+    {
+      "source": "/nvidia-api/:path*",
+      "destination": "https://ai.api.nvidia.com/:path*"
+    },
+    {
+      "source": "/nemotron-api/:path*",
+      "destination": "https://integrate.api.nvidia.com/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
