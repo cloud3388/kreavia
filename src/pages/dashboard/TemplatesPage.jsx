@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Download, Layout, X, Type, Image as ImageIcon, Palette, Copy, Shapes, Sparkles, Loader2, Wand2 } from 'lucide-react';
+import { Download, Layout, X, Type, Image as ImageIcon, Palette, Copy, Shapes, Sparkles, Loader2, Wand2, Phone } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { generateImage } from '../../services/nvidiaService';
 import TemplateRenderer from '../../components/dashboard/TemplateRenderer';
+import html2canvas from 'html2canvas';
 
 const DEFAULT_BRAND = {
   brandName: 'Kreavia',
@@ -21,36 +22,78 @@ const TemplatesPage = () => {
   const [brandData, setBrandData] = useState(DEFAULT_BRAND);
   const [localBrandData, setLocalBrandData] = useState(DEFAULT_BRAND);
   const [localText, setLocalText] = useState('');
+  const [activeTab, setActiveTab] = useState('typography');
 
   useEffect(() => {
     const savedKit = sessionStorage.getItem('currentBrandKit');
     if (savedKit) {
       try {
         const parsed = JSON.parse(savedKit);
-        setBrandData({ ...DEFAULT_BRAND, ...parsed, colors: { ...DEFAULT_BRAND.colors, ...(parsed.colors || {}) }, typography: { ...DEFAULT_BRAND.typography, ...(parsed.typography || {}) } });
+        const merged = { 
+          ...DEFAULT_BRAND, 
+          ...parsed, 
+          colors: { ...DEFAULT_BRAND.colors, ...(parsed.colors || {}) }, 
+          typography: { ...DEFAULT_BRAND.typography, ...(parsed.typography || {}) } 
+        };
+        setBrandData(merged);
+        setLocalBrandData(merged);
       } catch (err) {
         console.error('Failed to parse brand kit:', err);
       }
     }
   }, []);
 
+  const handleDownloadPNG = async () => {
+    const canvas = document.getElementById('template-canvas');
+    if (!canvas) return;
+    try {
+      const dataUrl = await html2canvas(canvas, { 
+        scale: 2, 
+        useCORS: true,
+        backgroundColor: null 
+      }).then(c => c.toDataURL('image/png'));
+      
+      const link = document.createElement('a');
+      link.download = `brand-asset-${Date.now()}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.error('Export failed:', err);
+    }
+  };
+
   const handleGenerateBackground = async () => {
-    if (!brandData) return;
+    if (!localBrandData) return;
     setIsGenerating(true);
     
     try {
-      const prompt = `A premium ${brandData.vibe || 'minimalist'} ${brandData.niche || 'lifestyle'} lifestyle aesthetic flat-lay background, 
-      high quality, artistic photography, soft lighting, using a color palette of ${Object.values(brandData.colors).join(', ')}. 
-      No text, no clutter, professional studio lighting.`;
+      const variations = ['cinematic lighting', 'ethereal atmosphere', 'abstract textures', 'minimal composition', 'dreamy focus'];
+      const randomVar = variations[Math.floor(Math.random() * variations.length)];
+      
+      const prompt = `Premium ${localBrandData.vibe || 'minimalist'} ${localBrandData.niche || 'lifestyle'} lifestyle aesthetic, ${randomVar}, 
+      high quality photography, soft depth of field, color palette: ${Object.values(localBrandData.colors).join(', ')}. 
+      Seed: ${Date.now()}. No text, professional studio light.`;
       
       const imageUrl = await generateImage(prompt);
       if (imageUrl) {
+        setLocalBrandData({ ...localBrandData, customBg: imageUrl });
         setGeneratedBg(imageUrl);
       }
     } catch (err) {
       console.error('Generation failed:', err);
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setLocalBrandData({ ...localBrandData, productImage: event.target.result });
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -63,13 +106,14 @@ const TemplatesPage = () => {
     { id: 6, type: 'instagram', title: 'Announcement', renderType: 'quote', text: 'BIG THINGS COMING SOON' },
     { id: 7, type: 'story', title: 'Q&A Template', renderType: 'story', text: 'ASK ANYTHING' },
     { id: 8, type: 'instagram', title: 'Tip of the Day', renderType: 'carousel', text: 'How to Build Consistency' },
+    { id: 9, type: 'instagram', title: 'Educational', renderType: 'educational', text: 'How to maintain brand consistency.' },
   ];
 
   const filtered = filter === 'all' ? templates : templates.filter(t => t.type === filter);
 
   return (
-    <div className="flex flex-col gap-10 w-full max-w-7xl mx-auto pb-20">
-       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+    <div className="flex flex-col gap-10 w-full max-w-7xl mx-auto pb-20 pt-8 animate-fade-in">
+       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-4 md:px-0">
           <div>
             <h2 className="text-4xl font-headline font-bold text-primary mb-2">Editorial Templates</h2>
             <p className="text-muted text-sm font-medium">Fully customizable layouts synchronized with your brand DNA.</p>
@@ -88,7 +132,7 @@ const TemplatesPage = () => {
        </div>
 
        {/* Grid */}
-       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-10">
+       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-10 px-4 md:px-0">
          {filtered.length > 0 ? filtered.map(template => (
              <motion.div 
                layout
@@ -111,13 +155,22 @@ const TemplatesPage = () => {
                       <button onClick={() => { 
                         setEditingTemplate(template); 
                         setGeneratedBg(null); 
-                        setLocalBrandData(brandData);
+                        setLocalBrandData({ ...brandData, shapes: brandData.shapes || [] });
                         setLocalText(template.text);
                       }} className="btn btn-primary text-[10px] font-black uppercase tracking-widest w-2/3 h-12 shadow-glow flex gap-2 items-center justify-center text-secondary">
                         <Palette size={14} /> Open Editor
                       </button>
-                      <button className="btn btn-outline border-primary/20 text-primary hover:border-accent hover:text-accent text-[10px] font-black uppercase tracking-widest w-2/3 h-12 flex gap-2 items-center justify-center">
+                      <button className="btn btn-outline border-white/20 text-white hover:border-accent hover:text-accent text-[10px] font-black uppercase tracking-widest w-2/3 h-12 flex gap-2 items-center justify-center">
                         <Copy size={14} /> Duplicate
+                      </button>
+                      <button 
+                        onClick={() => {
+                           setEditingTemplate(template);
+                           setTimeout(handleDownloadPNG, 500);
+                        }}
+                        className="btn btn-ghost text-white/60 hover:text-white text-[10px] font-black uppercase tracking-widest w-2/3 flex gap-2 items-center justify-center"
+                      >
+                         <Download size={14} /> Quick Export
                       </button>
                    </div>
                 </div>
@@ -127,7 +180,7 @@ const TemplatesPage = () => {
                       <span className="text-[9px] font-bold uppercase tracking-widest text-accent mt-1 opacity-60">{template.type}</span>
                    </div>
                    <div className="w-10 h-10 rounded-xl bg-white shadow-inner flex items-center justify-center text-accent border border-light/30">
-                      <Download size={16} />
+                      {template.type === 'instagram' ? <Layout size={16} /> : <Phone size={16} />}
                    </div>
                 </div>
              </motion.div>
@@ -171,13 +224,21 @@ const TemplatesPage = () => {
                     <div className="flex-1 overflow-y-auto py-8">
                        <div className="flex flex-col gap-4 px-2 lg:px-4">
                           {[
-                            { icon: <Type size={22} />, label: 'Typography' },
-                            { icon: <ImageIcon size={22} />, label: 'Media Library' },
-                            { icon: <Shapes size={22} />, label: 'Geometric elements' },
-                            { icon: <Palette size={22} />, label: 'Brand Palette' },
-                          ].map((item, idx) => (
-                             <button key={idx} className="flex flex-col lg:flex-row items-center gap-1 lg:gap-5 p-5 rounded-2xl hover:bg-black/5 transition-all border border-transparent hover:border-light text-primary w-full text-center lg:text-left group">
-                                <div className="text-accent group-hover:scale-110 transition-transform">{item.icon}</div>
+                            { id: 'typography', icon: <Type size={22} />, label: 'Typography' },
+                            { id: 'media', icon: <ImageIcon size={22} />, label: 'Media Library' },
+                            { id: 'shapes', icon: <Shapes size={22} />, label: 'Geometric elements' },
+                            { id: 'palette', icon: <Palette size={22} />, label: 'Brand Palette' },
+                          ].map((item) => (
+                             <button 
+                                key={item.id} 
+                                onClick={() => setActiveTab(item.id)}
+                                className={`flex flex-col lg:flex-row items-center gap-1 lg:gap-5 p-5 rounded-2xl transition-all border ${
+                                   activeTab === item.id 
+                                   ? 'bg-accent/10 border-accent text-accent shadow-sm' 
+                                   : 'bg-transparent border-transparent hover:bg-black/5 text-primary hover:border-light'
+                                } w-full text-center lg:text-left group`}
+                             >
+                                <div className={`${activeTab === item.id ? 'scale-110' : 'group-hover:scale-110'} transition-transform`}>{item.icon}</div>
                                 <span className="font-black text-[10px] lg:text-[11px] uppercase tracking-widest mt-1 lg:mt-0 opacity-70 lg:opacity-100">{item.label}</span>
                              </button>
                           ))}
@@ -201,7 +262,7 @@ const TemplatesPage = () => {
                     </div>
                  </div>
 
-                 {/* Center Canvas */}
+                 {/* Center Canvas Area */}
                  <div className="flex-1 bg-highlight/50 flex flex-col relative overflow-hidden">
                     <div className="absolute top-0 inset-x-0 h-[80px] flex items-center justify-between px-10 z-20 pointer-events-none">
                        <div className="pointer-events-auto mt-10">
@@ -210,7 +271,7 @@ const TemplatesPage = () => {
                     </div>
 
                     <div className="flex-1 flex items-center justify-center p-10 lg:p-20 relative overflow-auto pt-24 md:pt-10">
-                       <div className="relative w-full max-w-[50vh] lg:max-w-[70vh] aspect-[4/5] bg-white shadow-2xl border border-light group overflow-hidden rounded-xl">
+                       <div id="template-canvas" className="relative w-full max-w-[50vh] lg:max-w-[70vh] aspect-[4/5] bg-white shadow-2xl border border-light group overflow-hidden rounded-xl">
                          <AnimatePresence>
                            {isGenerating && (
                              <motion.div 
@@ -226,15 +287,11 @@ const TemplatesPage = () => {
                          </AnimatePresence>
 
                          <div className="w-full h-full relative">
-                            {generatedBg ? (
-                                <img src={generatedBg} alt="AI Generated" className="w-full h-full object-cover" />
-                            ) : (
-                                <TemplateRenderer 
-                                    type={editingTemplate.renderType} 
-                                    brandData={localBrandData} 
-                                    text={localText} 
-                                />
-                            )}
+                            <TemplateRenderer 
+                                type={editingTemplate.renderType} 
+                                brandData={localBrandData} 
+                                text={localText} 
+                            />
                          </div>
                        </div>
                     </div>
@@ -243,7 +300,7 @@ const TemplatesPage = () => {
                  {/* Right Sidebar */}
                  <div className="hidden md:flex w-[340px] border-l border-light bg-surface flex-col shrink-0 z-20">
                     <div className="h-[80px] border-b border-light flex items-center justify-between px-8 shrink-0 gap-4">
-                       <button className="btn btn-primary h-12 flex-1 text-[11px] font-black uppercase tracking-widest shadow-glow flex items-center justify-center gap-3 text-secondary">
+                       <button onClick={handleDownloadPNG} className="btn btn-primary h-12 flex-1 text-[11px] font-black uppercase tracking-widest shadow-glow flex items-center justify-center gap-3 text-secondary">
                           <Download size={18} /> Deploy Asset
                        </button>
                        <button onClick={() => setEditingTemplate(null)} className="p-2.5 text-muted hover:text-primary rounded-2xl hover:bg-black/5 transition-colors flex-shrink-0 border border-transparent hover:border-light">
@@ -251,67 +308,102 @@ const TemplatesPage = () => {
                        </button>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-8 flex flex-col gap-10">
-                       <div className="p-5 rounded-2xl bg-accent/5 border border-accent/10 shadow-sm">
-                          <div className="flex items-center gap-3 mb-3 text-accent">
-                             <Sparkles size={18} />
-                             <span className="text-[11px] font-black uppercase tracking-widest">Brand Aligned</span>
-                          </div>
-                          <p className="text-[11px] text-muted leading-relaxed font-medium">
-                             Synchronized with your <strong>{brandData?.typography?.headline}</strong> signature and premium palette.
-                          </p>
-                       </div>
-
-                       <div className="flex flex-col gap-6">
-                          <h4 className="text-[11px] font-black uppercase tracking-widest text-muted">Typography Settings</h4>
-                          <div className="flex flex-col gap-3">
-                             <label className="text-[10px] uppercase tracking-widest font-black text-muted/60 ml-1">Font Family</label>
-                             <select 
-                                value={localBrandData.typography?.headline || 'Playfair Display'}
-                                onChange={(e) => setLocalBrandData({...localBrandData, typography: {...localBrandData.typography, headline: e.target.value}})}
-                                className="input h-12 text-sm bg-secondary border-light text-primary py-0 w-full focus:border-accent font-bold shadow-sm"
-                             >
-                                <option value="Playfair Display">Playfair Display</option>
-                                <option value="Inter">Inter</option>
-                                <option value="Satoshi">Satoshi</option>
-                             </select>
-                          </div>
-                          <div className="grid grid-cols-2 gap-6">
+                    <div className="flex-1 overflow-y-auto p-8 flex flex-col gap-10 custom-scrollbar">
+                       {activeTab === 'typography' && (
+                          <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                             <h4 className="text-[11px] font-black uppercase tracking-widest text-muted">Typography Settings</h4>
+                             <div className="flex flex-col gap-3">
+                                <label className="text-[10px] uppercase tracking-widest font-black text-muted/60 ml-1">Font Family</label>
+                                <select 
+                                   value={localBrandData.typography?.headline || 'Playfair Display'}
+                                   onChange={(e) => setLocalBrandData({...localBrandData, typography: {...localBrandData.typography, headline: e.target.value}})}
+                                   className="input h-12 text-sm bg-secondary border-light text-primary py-0 w-full focus:border-accent font-bold shadow-sm"
+                                >
+                                   {['Playfair Display', 'Inter', 'Satoshi', 'Outfit', 'Montserrat', 'Space Grotesk'].map(f => <option key={f} value={f}>{f}</option>)}
+                                </select>
+                             </div>
                              <div className="flex flex-col gap-3">
                                 <label className="text-[10px] uppercase tracking-widest font-black text-muted/60 ml-1">Content</label>
                                 <div className="flex items-start bg-secondary border border-light rounded-xl overflow-hidden focus-within:border-accent shadow-sm">
                                    <textarea 
                                      value={localText}
                                      onChange={(e) => setLocalText(e.target.value)}
-                                     rows={3}
+                                     rows={4}
                                      className="w-full bg-transparent border-none text-primary text-sm px-4 py-3 outline-none font-bold resize-none custom-scrollbar" 
                                    />
                                 </div>
                              </div>
+                          </div>
+                       )}
+
+                       {activeTab === 'media' && (
+                          <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-right-4 duration-300">
+                             <h4 className="text-[11px] font-black uppercase tracking-widest text-muted">Media Library</h4>
                              <div className="flex flex-col gap-3">
-                                <label className="text-[10px] uppercase tracking-widest font-black text-muted/60 ml-1">Presence</label>
-                                <label className="flex items-center gap-3 bg-secondary border border-light rounded-xl p-3 cursor-pointer border-accent shadow-sm">
+                                <label className="text-[10px] uppercase tracking-widest font-black text-muted/60 ml-1">Mockup Upload</label>
+                                <input type="file" onChange={handleImageUpload} className="hidden" id="editor-image-upload" accept="image/*" />
+                                <label htmlFor="editor-image-upload" className="flex flex-col items-center justify-center gap-4 p-10 rounded-2xl border border-dashed border-light hover:border-accent cursor-pointer transition-all bg-secondary/50 hover:bg-white group">
+                                   <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center text-accent group-hover:scale-110 transition-transform">
+                                      <ImageIcon size={24} />
+                                   </div>
+                                   <span className="text-[10px] font-black uppercase tracking-widest text-muted group-hover:text-primary">Upload Custom Mockup</span>
+                                </label>
+                             </div>
+                             
+                             <div className="p-5 rounded-2xl bg-accent/5 border border-accent/10 shadow-sm">
+                                <div className="flex items-center gap-3 mb-3 text-accent">
+                                   <Sparkles size={18} />
+                                   <span className="text-[11px] font-black uppercase tracking-widest">AI Backgrounds</span>
+                                </div>
+                                <p className="text-[10px] text-muted leading-relaxed font-medium">Use the <strong>AI Essence</strong> button in the left sidebar to generate a unique backdrop.</p>
+                             </div>
+                          </div>
+                       )}
+
+                       {activeTab === 'palette' && (
+                          <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-right-4 duration-300">
+                             <h4 className="text-[11px] font-black uppercase tracking-widest text-muted">Brand Palette</h4>
+                             <div className="flex flex-col gap-3">
+                                <label className="text-[10px] uppercase tracking-widest font-black text-muted/60 ml-1">Accent Precision</label>
+                                <label className="flex items-center gap-4 bg-secondary border border-light rounded-2xl p-4 cursor-pointer hover:border-accent transition-all shadow-sm">
                                    <input 
                                      type="color" 
                                      value={localBrandData.colors?.accent || '#C6A96B'}
                                      onChange={(e) => setLocalBrandData({...localBrandData, colors: {...localBrandData.colors, accent: e.target.value}})}
                                      className="sr-only"
                                    />
-                                   <div className="w-6 h-6 rounded-md shadow-inner border border-black/10" style={{ backgroundColor: localBrandData.colors?.accent || '#C6A96B' }}></div>
-                                   <span className="text-xs font-black uppercase text-primary text-ellipsis overflow-hidden whitespace-nowrap">{localBrandData.colors?.accent || '#C6A96B'}</span>
+                                   <div className="w-10 h-10 rounded-xl shadow-inner border border-black/10 transition-transform hover:scale-105" style={{ backgroundColor: localBrandData.colors?.accent || '#C6A96B' }}></div>
+                                   <div className="flex flex-col">
+                                      <span className="text-xs font-black uppercase text-primary mb-1">Color Picker</span>
+                                      <span className="text-[10px] font-mono text-muted">{localBrandData.colors?.accent || '#C6A96B'}</span>
+                                   </div>
                                 </label>
                              </div>
-                          </div>
-                       </div>
 
-                       <div className="flex flex-col gap-6">
-                          <h4 className="text-[11px] font-black uppercase tracking-widest text-muted">Quick Aesthetics</h4>
-                          <div className="grid grid-cols-2 gap-3">
-                             <button onClick={() => setLocalBrandData({...localBrandData, colors: {...localBrandData.colors, primary: localBrandData.colors?.highlight || '#F5F5F7', highlight: localBrandData.colors?.primary || '#1A1A1A'}})} className="px-4 py-3 rounded-xl bg-secondary border border-light text-[10px] font-black uppercase tracking-widest hover:border-accent transition-all shadow-sm">Invert Focus</button>
-                             <button onClick={() => setLocalBrandData({...localBrandData, colors: {...localBrandData.colors, primary: '#000000', accent: '#000000', highlight: '#F1F1F1', secondary: '#FFFFFF'}})} className="px-4 py-3 rounded-xl bg-secondary border border-light text-[10px] font-black uppercase tracking-widest hover:border-accent transition-all shadow-sm">Minimalist</button>
-                             <button onClick={() => { setLocalBrandData(brandData); setLocalText(editingTemplate.text); }} className="px-4 py-3 rounded-xl bg-secondary border border-light text-[10px] font-black uppercase tracking-widest hover:border-accent transition-all col-span-2 shadow-sm">Restore Brand Sync</button>
+                             <div className="flex flex-col gap-4">
+                                <label className="text-[10px] uppercase tracking-widest font-black text-muted/60 ml-1">Quick Aesthetics</label>
+                                <div className="grid grid-cols-2 gap-3">
+                                   <button onClick={() => setLocalBrandData({...localBrandData, colors: {...localBrandData.colors, primary: localBrandData.colors?.highlight || '#F5F5F7', highlight: localBrandData.colors?.primary || '#1A1A1A'}})} className="px-4 py-3 rounded-xl bg-secondary border border-light text-[10px] font-black uppercase tracking-widest hover:border-accent transition-all shadow-sm">Invert Focus</button>
+                                   <button onClick={() => setLocalBrandData({...localBrandData, colors: {...localBrandData.colors, primary: '#000000', accent: '#000000', highlight: '#F1F1F1', secondary: '#FFFFFF'}})} className="px-4 py-3 rounded-xl bg-secondary border border-light text-[10px] font-black uppercase tracking-widest hover:border-accent transition-all shadow-sm">Minimalist</button>
+                                   <button onClick={() => { setLocalBrandData(brandData); setLocalText(editingTemplate.text); }} className="px-4 py-3 rounded-xl bg-secondary border border-light text-[10px] font-black uppercase tracking-widest hover:border-accent transition-all col-span-2 shadow-sm">Restore Brand Sync</button>
+                                </div>
+                             </div>
                           </div>
-                       </div>
+                       )}
+
+                       {activeTab === 'shapes' && (
+                          <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                             <h4 className="text-[11px] font-black uppercase tracking-widest text-muted">Geometric Elements</h4>
+                             <div className="grid grid-cols-2 gap-4">
+                                {[1, 2, 3, 4].map(idx => (
+                                   <div key={idx} className="aspect-square rounded-2xl border border-light bg-secondary flex items-center justify-center text-muted hover:border-accent hover:text-accent cursor-pointer transition-all">
+                                      <Shapes size={24} />
+                                   </div>
+                                ))}
+                             </div>
+                             <p className="text-[10px] text-muted text-center font-medium opacity-60">Custom shapes for your brand are currently in synchronization process.</p>
+                          </div>
+                       )}
                     </div>
                  </div>
                  
