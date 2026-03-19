@@ -34,10 +34,10 @@ console.log(`[NVIDIA] Mode: ${isMock ? 'MOCK (no valid key)' : useProxy ? 'PROXY
 // ──────────────────────────────────────────
 const buildNvidiaInput = (prompt, options = {}) => ({
   text_prompts: [
-    { text: prompt,                      weight: 1  },
-    { text: options.negativePrompt || 'blurry, low quality, watermark, text overlay, ugly, deformed, noisy, pixelated', weight: -1 },
+    { text: prompt,                      weight: 1.0  },
+    { text: options.negativePrompt || 'blurry, low quality, watermark, text overlay, ugly, deformed, noisy, pixelated', weight: -1.0 },
   ],
-  sampler:       options.sampler      || 'K_EULER',
+  sampler:       options.sampler      || 'K_DPM_2_ANCESTRAL',
   steps:         options.steps        || 25,
   cfg_scale:     options.guidanceScale || 7.5,
   seed:          options.seed         || 0,          // 0 = random
@@ -157,7 +157,7 @@ export const generateTemplateBackground = async (prompt, format = 'square') => {
     square:    { width: 1024, height: 1024 },
     portrait:  { width: 1024, height: 1280 },
     landscape: { width: 1280, height: 720  },
-    story:     { width: 1024, height: 1820 },
+    story:     { width: 1024, height: 1792 },
   };
 
   const { width, height } = dimensions[format] || dimensions.square;
