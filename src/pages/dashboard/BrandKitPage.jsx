@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Palette, Type, Image as ImageIcon, Copy, CheckCircle, Sparkles, AlertCircle } from 'lucide-react';
+import { Palette, Type, Image as ImageIcon, Copy, CheckCircle, Sparkles, AlertCircle, Download, FileText } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import logoAsset from '../../assets/logo.png';
 import { generateBrandIdentity } from '../../services/aiService';
 import { motion, AnimatePresence } from 'framer-motion';
 import SocialFeedPreview from '../../components/dashboard/SocialFeedPreview';
 
 const BrandKitPage = () => {
+  const navigate = useNavigate();
   const [brandData, setBrandData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -114,7 +117,7 @@ const BrandKitPage = () => {
           <h3 className="text-accent text-[10px] font-bold uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
             <Sparkles size={12} /> Brand Identity DNA
           </h3>
-          <div className="text-5xl font-headline text-primary font-bold tracking-tight">{brandData?.brandArchetype || 'The Visionary'}</div>
+          <div className="text-5xl font-headline text-primary font-bold tracking-tight text-primary">{brandData?.brandArchetype || 'The Visionary'}</div>
         </div>
         <div className="text-right relative z-10">
            <div className="text-muted text-[10px] font-bold uppercase tracking-[0.2em] mb-1">Brand Consistency</div>
@@ -148,14 +151,26 @@ const BrandKitPage = () => {
                     </div>
                  </div>
                  <img 
-                   src={brandData?.logos?.[0]?.url || "https://placehold.co/400x400/3E2723/FDF8F1?text=Logo"} 
+                   src={logoAsset} 
                    alt="Primary Logo" 
-                   className="w-40 h-40 object-contain drop-shadow-2xl group-hover:scale-105 transition-transform duration-700" 
+                   className="w-48 h-48 object-contain drop-shadow-2xl group-hover:scale-105 transition-transform duration-700" 
                  />
                  
-                 <div className="absolute inset-x-0 bottom-0 p-6 flex gap-3 translate-y-full group-hover:translate-y-0 transition-all duration-500 bg-gradient-to-t from-surface to-transparent backdrop-blur-sm">
-                    <button className="btn btn-primary text-[10px] uppercase font-bold tracking-widest flex-1 h-10 shadow-glow">SVG Vector</button>
-                    <button className="btn btn-outline text-[10px] uppercase font-bold tracking-widest flex-1 h-10 border-accent/20 text-accent hover:border-accent">HQ Print</button>
+                 <div className="absolute inset-x-0 bottom-0 p-6 flex gap-3 h-20 bg-gradient-to-t from-primary to-transparent backdrop-blur-md border-t border-white/5">
+                    <a 
+                      href={logoAsset} 
+                      download="Kreavia-Logo.png"
+                      className="btn btn-primary text-[10px] uppercase font-bold tracking-widest flex-1 h-10 shadow-glow flex items-center justify-center gap-2 border border-accent/20"
+                    >
+                      <Download size={14} /> PNG/SVG
+                    </a>
+                    <a 
+                      href={logoAsset} 
+                      download="Kreavia-Logo-HQ.png"
+                      className="btn btn-outline text-[10px] uppercase font-bold tracking-widest flex-1 h-10 border-accent/20 text-accent hover:border-accent flex items-center justify-center gap-2 bg-surface/10"
+                    >
+                      <FileText size={14} /> HQ Print
+                    </a>
                  </div>
              </div>
           </motion.div>
@@ -169,11 +184,16 @@ const BrandKitPage = () => {
                  </div>
                  <h3 className="text-2xl font-headline text-primary font-bold">Chromatic palette</h3>
                </div>
-               <button className="text-[10px] font-bold text-accent uppercase tracking-widest hover:text-primary transition-colors border-b border-accent/20 pb-1">Edit Palette</button>
+               <button 
+                 onClick={() => navigate('/dashboard/settings')}
+                 className="btn btn-outline border-accent/30 text-accent hover:bg-accent hover:text-white transition-all duration-300 font-bold uppercase tracking-widest text-[10px] px-6 h-9 rounded-full shadow-sm"
+               >
+                 Edit Palette
+               </button>
              </div>
              
              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 h-[280px]">
-               {Object.entries(brandData?.colors || {}).map(([name, hex]) => (
+               {brandData?.colors ? Object.entries(brandData.colors).map(([name, hex]) => (
                  <div key={name} className="glass-card overflow-hidden group flex flex-col border-none shadow-sm hover:shadow-xl transition-all duration-500 hover:-translate-y-1">
                    <div 
                      className="flex-1 w-full transition-transform duration-700 group-hover:scale-110 relative" 
@@ -196,7 +216,7 @@ const BrandKitPage = () => {
                      </button>
                    </div>
                  </div>
-               ))}
+               )) : null}
              </div>
           </motion.div>
 
@@ -232,7 +252,7 @@ const BrandKitPage = () => {
                     <div className="text-[9px] font-black uppercase tracking-[0.25em] text-accent/60 mb-8 flex items-center gap-2">
                       <div className="w-4 h-px bg-accent/30"></div> Typesetting Specimen
                     </div>
-                    <h4 className="font-headline text-6xl mb-8 leading-[1.05] text-primary font-bold tracking-tight">The Art of Essence.</h4>
+                    <h4 className="font-headline text-6xl mb-8 leading-[1.05] text-primary font-bold tracking-tight text-primary">The Art of Essence.</h4>
                     <p className="font-body text-primary/60 leading-[1.8] text-lg max-w-lg font-medium italic">
                       "Design is not just what it looks like and feels like. Design is how it works."
                     </p>
@@ -253,27 +273,30 @@ const BrandKitPage = () => {
                <h3 className="text-2xl font-headline text-primary font-bold">Brand persona</h3>
              </div>
              
-             <div className="glass-card p-10 border-none flex flex-col gap-8 min-h-[340px] bg-primary text-secondary relative overflow-hidden group shadow-premium">
-                <div className="absolute top-0 right-0 w-48 h-48 bg-accent/10 blur-[100px] rounded-full -mr-24 -mt-24 group-hover:bg-accent/20 transition-all duration-1000"></div>
+             <div 
+               className="p-10 flex flex-col gap-8 min-h-[340px] relative overflow-hidden group shadow-2xl rounded-[2.5rem] border border-white/20"
+               style={{ background: '#0F0F0F', color: '#FFFFFF' }}
+             >
+                <div className="absolute top-0 right-0 w-48 h-48 bg-accent/20 blur-[100px] rounded-full -mr-24 -mt-24 group-hover:bg-accent/40 transition-all duration-1000"></div>
                 <div className="relative z-10">
-                   <div className="text-accent/50 text-[9px] font-black uppercase tracking-[0.2em] mb-4">Master Archetype</div>
-                   <div className="text-4xl font-headline font-bold tracking-tight mb-2 text-secondary">{brandData?.brandArchetype || 'The Visionary'}</div>
+                   <div className="text-accent text-[9px] font-black uppercase tracking-[0.2em] mb-4">Master Archetype</div>
+                   <div className="text-4xl font-headline font-bold tracking-tight mb-2 text-white">{brandData?.brandArchetype || 'The Visionary'}</div>
                 </div>
-                <div className="w-16 h-0.5 bg-accent/20 relative z-10 mt-2"></div>
+                <div className="w-16 h-0.5 bg-accent/40 relative z-10 mt-2"></div>
                 <div className="relative z-10 overflow-hidden">
-                   <div className="text-accent/50 text-[9px] font-black uppercase tracking-[0.2em] mb-6">Tone of Voice</div>
+                   <div className="text-accent/60 text-[9px] font-black uppercase tracking-[0.2em] mb-6">Tone of Voice</div>
                    <div className="flex flex-col gap-3">
                       <div className="flex items-center gap-3 group/item">
                          <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse"></div>
-                         <span className="text-sm font-bold tracking-wide text-secondary/90 group-hover/item:text-accent transition-colors">Sophisticated & Elite</span>
+                         <span className="text-sm font-bold tracking-wide text-white group-hover/item:text-accent transition-colors">Sophisticated & Elite</span>
                       </div>
                       <div className="flex items-center gap-3 group/item">
                          <div className="w-1.5 h-1.5 rounded-full bg-accent/40"></div>
-                         <span className="text-sm font-bold tracking-wide text-secondary/70 group-hover/item:text-accent transition-colors">Articulate & Poised</span>
+                         <span className="text-sm font-bold tracking-wide text-white/90 group-hover/item:text-accent transition-colors">Articulate & Poised</span>
                       </div>
                       <div className="flex items-center gap-3 group/item">
                          <div className="w-1.5 h-1.5 rounded-full bg-accent/40"></div>
-                         <span className="text-sm font-bold tracking-wide text-secondary/70 group-hover/item:text-accent transition-colors">Minimalist Elegance</span>
+                         <span className="text-sm font-bold tracking-wide text-white/80 group-hover/item:text-accent transition-colors">Minimalist Elegance</span>
                       </div>
                    </div>
                 </div>
@@ -290,7 +313,7 @@ const BrandKitPage = () => {
                         btn.disabled = false;
                       }, 1500);
                     }}
-                    className="btn btn-primary w-full py-4 shadow-xl group-hover:shadow-glow transition-all duration-500 font-bold uppercase tracking-[0.2em] text-[10px]"
+                    className="btn btn-primary w-full py-4 shadow-glow transition-all duration-500 font-bold uppercase tracking-[0.2em] text-[10px]"
                   >
                     Download brand deck
                   </button>

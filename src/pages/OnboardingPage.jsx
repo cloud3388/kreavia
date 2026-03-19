@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Sparkles, Wand2, Dumbbell, Plane, Shirt, Gamepad2, Briefcase, Coffee, Check } from 'lucide-react';
+import { 
+  ArrowLeft, ArrowRight, Sparkles, Wand2, Dumbbell, Plane, Shirt, 
+  Gamepad2, Briefcase, Coffee, Check, Cpu, Utensils, Home, Users, Laptop
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { buildBrandDNA } from '../ai/brandDNA';
 import { generateBrandKit } from '../ai/pipeline';
+import { generateHybridKit } from '../services/hybridAIService';
 
 const PIPELINE_STEPS = [
   'Building brand profile...',
@@ -12,6 +16,8 @@ const PIPELINE_STEPS = [
   'Selecting typography...',
   'Building templates...',
   'Writing content ideas...',
+  'Generating brand narrative...',
+  'Visualizing brand assets...',
 ];
 
 const LoadingScreen = ({ currentStep, currentLabel }) => {
@@ -83,13 +89,20 @@ const OnboardingPage = () => {
       // Store Brand DNA in sessionStorage so BrandKitPage can use it
       sessionStorage.setItem('brandDNA', JSON.stringify(dna));
 
+      // Execute the full hybrid pipeline
       const result = await generateBrandKit(dna, (stepIndex, label) => {
         setPipelineStep(stepIndex);
         setPipelineLabel(label);
       });
 
+      // Execute phase 2: Hybrid Content Generation (with its own steps 6 and 7)
+      const hybridResult = await generateHybridKit(dna, (step, msg) => {
+          setPipelineStep(5 + step); // Map hybrid step 1, 2 to pipeline step 6, 7
+          setPipelineLabel(msg);
+      });
+
       // Store the full generated kit for the dashboard
-      sessionStorage.setItem('currentBrandKit', JSON.stringify(result));
+      sessionStorage.setItem('currentBrandKit', JSON.stringify({ ...result, hybridContent: hybridResult }));
 
       // Small pause so user sees "Done" before navigating
       setTimeout(() => navigate('/dashboard/brand-kit'), 800);
@@ -114,6 +127,9 @@ const OnboardingPage = () => {
     { id: 'travel', label: 'Travel', icon: <Plane size={24} /> },
     { id: 'fashion', label: 'Fashion', icon: <Shirt size={24} /> },
     { id: 'gaming', label: 'Gaming', icon: <Gamepad2 size={24} /> },
+    { id: 'technology', label: 'Technology', icon: <Cpu size={24} /> },
+    { id: 'food', label: 'Food & Drink', icon: <Utensils size={24} /> },
+    { id: 'real_estate', label: 'Real Estate', icon: <Home size={24} /> },
     { id: 'business', label: 'Business', icon: <Briefcase size={24} /> },
     { id: 'lifestyle', label: 'Lifestyle', icon: <Coffee size={24} /> },
   ];
@@ -212,7 +228,12 @@ const OnboardingPage = () => {
                            {[
                              { value: 'Entrepreneurs',     label: 'Entrepreneurs & Founders',    emoji: '💼' },
                              { value: 'Women 18-30',       label: 'Women 18–30',                  emoji: '✨' },
+                             { value: 'Gen Z',            label: 'Gen Z (13-24)',                emoji: '⚡' },
                              { value: 'Gamers',            label: 'Gamers & Streamers',           emoji: '🎮' },
+                             { value: 'Corporate',         label: 'Corporate Professionals',       emoji: '🏢' },
+                             { value: 'Small Business',    label: 'Small Business Owners',         emoji: '🏪' },
+                             { value: 'Freelancers',       label: 'Creative Freelancers',          emoji: '🎨' },
+                             { value: 'Tech Enthusiasts',  label: 'Tech Enthusiasts',              emoji: '💻' },
                              { value: 'Fitness beginners', label: 'Fitness Beginners',            emoji: '💪' },
                              { value: 'Luxury lifestyle',  label: 'Luxury Lifestyle Enthusiasts', emoji: '🥂' },
                            ].map(opt => (

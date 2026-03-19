@@ -45,7 +45,7 @@ const DashboardLayout = () => {
                 src={logo} 
                 alt="Kreavia Logo" 
                 className="navbar-logo group-hover:scale-110 transition-transform duration-500" 
-                style={{ height: '22px', width: '22px', objectFit: 'contain' }}
+                style={{ height: '42px', width: 'auto', objectFit: 'contain' }}
               />
             </div>
             <Link to="/" className="font-headline text-xl font-bold tracking-tight text-primary">Kreavia.ai</Link>
@@ -101,7 +101,7 @@ const DashboardLayout = () => {
                 src={logo} 
                 alt="Kreavia Logo" 
                 className="navbar-logo" 
-                style={{ height: '20px', width: '20px', objectFit: 'contain' }}
+                style={{ height: '32px', width: 'auto', objectFit: 'contain' }}
               />
              <span className="font-headline text-lg font-bold tracking-tight text-primary">Kreavia.ai</span>
            </div>

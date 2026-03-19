@@ -95,6 +95,9 @@ const getDynamicPalette = (dna) => {
   const base = palettes[dna.style] || palettes.luxury;
   if (dna.niche === 'fitness') return { ...base, accent: '#D63031' }; // Red for fitness
   if (dna.niche === 'travel')  return { ...base, accent: '#00B894' }; // Green for nature/travel
+  if (dna.niche === 'technology') return { ...base, accent: '#0984E3' }; // Blue for tech
+  if (dna.niche === 'food') return { ...base, accent: '#E17055' }; // Warm orange for food
+  if (dna.niche === 'real_estate') return { ...base, accent: '#2D3436' }; // Dark/Professional for real estate
   return base;
 };
 
@@ -106,7 +109,8 @@ const getDynamicFonts = (dna) => {
 };
 
 const getDynamicIdeas = (dna) => {
-  const niche = dna.niche.charAt(0).toUpperCase() + dna.niche.slice(1);
+  const nicheLabel = dna.niche.replace(/_/g, ' ');
+  const niche = nicheLabel.charAt(0).toUpperCase() + nicheLabel.slice(1);
   return [
     { title: `3 secrets to success in ${niche}`, hook: 'Want to know how the pros do it?', format: 'reel', angle: 'educational' },
     { title: `My ${niche} journey — starting from zero`, hook: 'I almost quit 3 times...', format: 'reel', angle: 'inspirational' },

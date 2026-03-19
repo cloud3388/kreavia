@@ -31,11 +31,28 @@ const SocialFeedPreview = ({ brandData: rawBrand }) => {
     { type: 'story', text: `Q&A Session`, layout: 'centered' },
   ];
 
-  const posts = brandData.contentIdeas?.map((idea, idx) => ({
-    type: idea.contentType === 'reel' ? 'reel_cover' : idea.contentType === 'story' ? 'story' : 'quote',
-    text: idea.title,
-    layout: idx % 2 === 0 ? 'centered' : 'minimal'
-  })) || demoPosts;
+  const hybridPosts = brandData.hybridContent?.map((item, idx) => ({
+    type: 'quote',
+    text: item.caption,
+    tagline: item.tagline,
+    imageUrl: item.imageUrl,
+    layout: 'bold'
+  })) || [];
+
+  const posts = hybridPosts.length > 0 ? hybridPosts : (brandData.contentIdeas?.map((idea, idx) => {
+    let type = 'quote';
+    if (idea.format === 'reel') type = 'reel_cover';
+    else if (idea.format === 'story') type = 'story';
+    else if (idea.format === 'carousel') type = 'carousel';
+    else if (idx % 3 === 0) type = 'educational';
+
+    const layouts = ['centered', 'minimal', 'bold'];
+    return {
+      type,
+      text: idea.title,
+      layout: layouts[idx % layouts.length]
+    };
+  }) || demoPosts);
 
   return (
     <div className="flex flex-col gap-8 items-center lg:items-start w-full">

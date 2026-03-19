@@ -12,6 +12,12 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/nvidia-api/, ''),
         secure: true,
       },
+      '/nemotron-api': {
+        target: 'https://integrate.api.nvidia.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/nemotron-api/, ''),
+        secure: true,
+      },
     },
   },
 })

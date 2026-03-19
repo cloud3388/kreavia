@@ -562,9 +562,11 @@ input, textarea, select {
 }
 
 .navbar-logo {
-  height: 18px !important;
-  width: 18px !important;
-  object-fit: contain !important;
+  height: auto;
+  width: auto;
+  max-height: 60px;
+  max-width: 100px;
+  object-fit: contain;
 }
 
 /* ========================================
