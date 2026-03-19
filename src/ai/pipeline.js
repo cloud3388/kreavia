@@ -79,30 +79,42 @@ const callAI = async (generationType, prompt, model) => {
 };
 
 // ──────────────────────────────────────────
-// Mock fallback data (used when no real API)
+// Smart Mocks (Dynamic fallbacks based on DNA)
 // ──────────────────────────────────────────
-const MOCK_PALETTE = {
-  primary: '#1A1A1A',
-  secondary: '#FBFBFD',
-  accent: '#C6A96B',
-  background: '#FFFFFF',
-  rationale: 'Clean minimalist aesthetic with premium gold accents.',
+
+const getDynamicPalette = (dna) => {
+  const palettes = {
+    luxury:   { primary: '#1A1A1A', secondary: '#FBFBFD', accent: '#C6A96B', background: '#FFFFFF', rationale: 'Premium dark aesthetic with gold accents for a luxury feel.' },
+    minimal:  { primary: '#2D3436', secondary: '#FFFFFF', accent: '#0984E3', background: '#F9F9F9', rationale: 'Clean, airy palette with a single professional accent color.' },
+    bold:     { primary: '#2D3436', secondary: '#FF7675', accent: '#6C5CE7', background: '#FFFFFF', rationale: 'High-energy, high-contrast palette for a bold brand presence.' },
+    playful:  { primary: '#6C5CE7', secondary: '#FDCB6E', accent: '#E17055', background: '#FFFFFF', rationale: 'Vibrant and inviting colors to create a friendly brand vibe.' },
+    'dark aesthetic': { primary: '#0F0F0F', secondary: '#1A1A1A', accent: '#E0E0E0', background: '#050505', rationale: 'Moody, cinematic dark mode palette for a modern aesthetic.' },
+  };
+  
+  // Mix in niche-specific tweaks if needed
+  const base = palettes[dna.style] || palettes.luxury;
+  if (dna.niche === 'fitness') return { ...base, accent: '#D63031' }; // Red for fitness
+  if (dna.niche === 'travel')  return { ...base, accent: '#00B894' }; // Green for nature/travel
+  return base;
 };
 
-const MOCK_FONTS = {
-  heading: 'Playfair Display',
-  body: 'Inter',
-  accent: 'Bebas Neue',
-  rationale: 'Elegant serif heading paired with clean modern sans for maximum readability.',
+const getDynamicFonts = (dna) => {
+  if (dna.style === 'luxury') return { heading: 'Playfair Display', body: 'Inter', accent: 'Satoshi', rationale: 'Elegant serif paired with modern sans-serif.' };
+  if (dna.style === 'minimal') return { heading: 'Inter', body: 'Inter', accent: 'Space Mono', rationale: 'Geometric sans-serif for a clean, technical look.' };
+  if (dna.style === 'bold') return { heading: 'Bebas Neue', body: 'Montserrat', accent: 'Inter', rationale: 'Strong display font for maximum impact.' };
+  return { heading: 'Outfit', body: 'Inter', accent: 'Plus Jakarta Sans', rationale: 'Modern and versatile font pairing.' };
 };
 
-const MOCK_IDEAS = [
-  { title: 'Things nobody tells you about this niche', hook: 'Nobody talks about this...', format: 'reel', angle: 'controversial' },
-  { title: 'My morning routine that changed everything', hook: 'I wasted 2 years doing this wrong', format: 'reel', angle: 'educational' },
-  { title: '3 mistakes beginners make (and how to fix them)', hook: 'Stop doing this immediately 🚫', format: 'carousel', angle: 'educational' },
-  { title: 'Behind the scenes: reality vs Instagram', hook: 'Real talk...', format: 'story', angle: 'entertaining' },
-  { title: 'Week in my life — unfiltered', hook: 'POV: you decided to actually go for it', format: 'reel', angle: 'inspirational' },
-];
+const getDynamicIdeas = (dna) => {
+  const niche = dna.niche.charAt(0).toUpperCase() + dna.niche.slice(1);
+  return [
+    { title: `3 secrets to success in ${niche}`, hook: 'Want to know how the pros do it?', format: 'reel', angle: 'educational' },
+    { title: `My ${niche} journey — starting from zero`, hook: 'I almost quit 3 times...', format: 'reel', angle: 'inspirational' },
+    { title: `Mistakes to avoid as a ${niche} beginner`, hook: 'Stop wasting your time on this 🚫', format: 'carousel', angle: 'educational' },
+    { title: `Unfiltered truth about the ${niche} industry`, hook: 'Real talk...', format: 'story', angle: 'controversial' },
+    { title: `Week in my life: ${niche} edition`, hook: 'POV: you decided to take it seriously', format: 'reel', angle: 'lifestyle' },
+  ];
+};
 
 const MOCK_LOGOS = [
   { style: 'monogram', url: 'https://placehold.co/400x400/1A1A1A/C6A96B?text=B&font=playfair', model_used: 'nvidia-sdxl' },
@@ -131,17 +143,20 @@ const generatePalette = async (dna, cacheKey) => {
 
     const prompt = buildPalettePrompt(dna);
     const raw = await callAI('brand_palette', prompt, MODEL_TIERS.brand_palette);
-    const { data, error } = raw ? safeParseJSON(raw) : { data: MOCK_PALETTE, error: null };
     
-    const { valid, errors } = validatePalette(data || MOCK_PALETTE);
-    const finalData = valid ? data : MOCK_PALETTE;
+    // Use dynamic mock if no real AI output
+    const dynamicFallback = getDynamicPalette(dna);
+    const { data } = raw ? safeParseJSON(raw) : { data: dynamicFallback };
+    
+    const { valid } = validatePalette(data || dynamicFallback);
+    const finalData = valid ? data : dynamicFallback;
 
     const score = scorePalette(finalData);
     await setCached(cacheKey, 'brand_palette', finalData);
     return { data: { ...finalData, quality_score: score }, fromCache: false };
   } catch (err) {
-    console.warn('[Pipeline] Palette generation failed, using mocks:', err);
-    return { data: { ...MOCK_PALETTE, quality_score: 80 }, fromCache: false };
+    const fallback = getDynamicPalette(dna);
+    return { data: { ...fallback, quality_score: 80 }, fromCache: false };
   }
 };
 
@@ -151,14 +166,15 @@ const generateFonts = async (dna, cacheKey) => {
 
   const prompt = buildFontPrompt(dna);
   const raw = await callAI('font_pairing', prompt, MODEL_TIERS.font_pairing);
-  const { data, error } = raw ? safeParseJSON(raw) : { data: MOCK_FONTS, error: null };
-  if (error) throw new Error(`Font parse failed: ${error}`);
+  
+  const dynamicFallback = getDynamicFonts(dna);
+  const { data } = raw ? safeParseJSON(raw) : { data: dynamicFallback };
 
-  const { valid, errors } = validateFonts(data);
-  if (!valid) throw new Error(`Fonts invalid: ${errors.join(', ')}`);
+  const { valid } = validateFonts(data || dynamicFallback);
+  const finalData = valid ? data : dynamicFallback;
 
-  await setCached(cacheKey, 'font_pairing', data);
-  return { data, fromCache: false };
+  await setCached(cacheKey, 'font_pairing', finalData);
+  return { data: finalData, fromCache: false };
 };
 
 const generateLogos = async (dna, palette) => {
@@ -203,8 +219,11 @@ const generateTemplateLayouts = async (dna) => {
 const generateContentIdeas = async (dna) => {
   const prompt = buildContentIdeasPrompt(dna, 10);
   const raw = await callAI('content_ideas', prompt, MODEL_TIERS.content_ideas);
-  const { data } = raw ? safeParseJSON(raw) : { data: MOCK_IDEAS };
-  const { data: validIdeas } = validateIdeas(data || MOCK_IDEAS);
+  
+  const dynamicFallback = getDynamicIdeas(dna);
+  const { data } = raw ? safeParseJSON(raw) : { data: dynamicFallback };
+  
+  const { data: validIdeas } = validateIdeas(data || dynamicFallback);
   return validIdeas;
 };
 
