@@ -21,7 +21,12 @@ const PROXY_URL      = '/api/generate/image';
 
 const apiKey   = import.meta.env.VITE_NVIDIA_API_KEY;
 const useProxy = import.meta.env.VITE_USE_AI_PROXY === 'true';
-const isMock   = !apiKey && !useProxy;
+
+// Treat missing OR placeholder keys as mock mode
+const isPlaceholder = !apiKey || apiKey.startsWith('nvapi-YOUR') || apiKey === 'nvapi-your_key_here';
+const isMock = isPlaceholder && !useProxy;
+
+console.log(`[NVIDIA] Mode: ${isMock ? 'MOCK (no valid key)' : useProxy ? 'PROXY' : 'DIRECT → Vite proxy → ai.api.nvidia.com'}`);
 
 // ──────────────────────────────────────────
 // Build NVIDIA SDXL request body
