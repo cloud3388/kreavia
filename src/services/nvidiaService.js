@@ -7,17 +7,18 @@
  * API:  https://ai.api.nvidia.com/v1/genai/stabilityai/stable-diffusion-xl
  *
  * Two modes:
- *   1. DIRECT  — calls NVIDIA API from browser (dev/testing only, exposes key)
- *   2. PROXY   — calls your backend /api/generate/image (recommended for production)
+ *   1. DIRECT  — browser → Vite proxy (/nvidia-api) → NVIDIA  [DEV only]
+ *   2. PROXY   — browser → /api/generate-image (Vercel fn) → NVIDIA  [PRODUCTION]
  *
- * Set VITE_USE_AI_PROXY=true in .env to use proxy mode.
- * Set VITE_NVIDIA_API_KEY in .env for direct mode (key starts with "nvapi-").
+ * Production setup (Vercel dashboard):
+ *   VITE_USE_AI_PROXY=true
+ *   NVIDIA_API_KEY=nvapi-xxxx  (server-side only, no VITE_ prefix)
  *
  * Fallback: Returns a placehold.co image URL when no API key is configured.
  */
 
-const NVIDIA_API_URL = '/nvidia-api/v1/genai/stabilityai/stable-diffusion-xl';
-const PROXY_URL      = '/api/generate/image';
+const NVIDIA_API_URL = '/nvidia-api/v1/genai/stabilityai/stable-diffusion-xl'; // dev only (Vite proxy)
+const PROXY_URL      = '/api/generate-image'; // production (Vercel serverless function)
 
 const apiKey   = import.meta.env.VITE_NVIDIA_API_KEY;
 const useProxy = import.meta.env.VITE_USE_AI_PROXY === 'true';
@@ -77,18 +78,17 @@ const callNvidiaDirect = async (prompt, options = {}) => {
 // Proxy call (production — hides API key)
 // ──────────────────────────────────────────
 const callProxy = async (prompt, options = {}) => {
+  // Sends NVIDIA-format body directly — the Vercel function adds auth and forwards
   const response = await fetch(PROXY_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      prompt,
-      provider: 'nvidia',
-      model:    'stable-diffusion-xl',
-      input:    buildNvidiaInput(prompt, options),
-    }),
+    body: JSON.stringify(buildNvidiaInput(prompt, options)),
   });
 
-  if (!response.ok) throw new Error(`Proxy error: ${response.statusText}`);
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(`Proxy error: ${err.error || response.statusText}`);
+  }
   const { imageUrl } = await response.json();
   return imageUrl;
 };
