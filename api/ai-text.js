@@ -3,16 +3,25 @@
  * Vercel Serverless Function — NVIDIA Chat API Proxy
  */
 
-const NVIDIA_TEXT_URL = 'https://integrate.api.nvidia.com/v1/chat/completions';
+const GROQ_TEXT_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const apiKey = process.env.NEMOTRON_API_KEY || process.env.VITE_NEMOTRON_API_KEY;
-  if (!apiKey || apiKey.startsWith('nvapi-YOUR')) {
-    return res.status(500).json({ error: 'NEMOTRON_API_KEY not configured.' });
+  const apiKey = process.env.GROQ_API_KEY || process.env.VITE_GROQ_API_KEY;
+  if (!apiKey || apiKey.startsWith('gsk_YOUR')) {
+    return res.status(500).json({ error: 'GROQ_API_KEY not configured.' });
   }
 
   const { dna, type = 'post' } = req.body;
@@ -36,7 +45,7 @@ export default async function handler(req, res) {
   `.trim();
 
   try {
-    const nvidiaRes = await fetch(NVIDIA_TEXT_URL, {
+    const groqRes = await fetch(GROQ_TEXT_URL, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -44,20 +53,20 @@ export default async function handler(req, res) {
         'Accept':        'application/json',
       },
       body: JSON.stringify({
-        model: 'nvidia/nemotron-3-super-120b-a12b',
+        model: 'llama-3.3-70b-versatile',
         messages: [{ role: 'user', content: prompt }],
-        temperature: 0.5,
-        top_p: 0.7,
+        temperature: 1,
+        top_p: 1,
         max_tokens: 1024,
       }),
     });
 
-    if (!nvidiaRes.ok) {
-      const err = await nvidiaRes.json().catch(() => ({}));
-      return res.status(nvidiaRes.status).json({ error: `NVIDIA API error: ${err.detail || nvidiaRes.statusText}` });
+    if (!groqRes.ok) {
+      const err = await groqRes.json().catch(() => ({}));
+      return res.status(groqRes.status).json({ error: `Groq API error: ${err.error?.message || groqRes.statusText}` });
     }
 
-    const data = await nvidiaRes.json();
+    const data = await groqRes.json();
     const content = data.choices[0].message.content;
     
     // Attempt to extract JSON if the model included extra text

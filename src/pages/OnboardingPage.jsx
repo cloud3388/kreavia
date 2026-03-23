@@ -9,18 +9,21 @@ import { buildBrandDNA } from '../ai/brandDNA';
 import { generateBrandKit } from '../ai/pipeline';
 import { generateHybridKit } from '../services/hybridAIService';
 
-const PIPELINE_STEPS = [
-  'Building brand profile...',
-  'Generating color palette...',
-  'Creating logo concepts...',
-  'Selecting typography...',
-  'Building templates...',
-  'Writing content ideas...',
-  'Generating brand narrative...',
-  'Visualizing brand assets...',
+const getPipelineSteps = (formData) => [
+  'You are a premium brand identity AI. The user has provided:',
+  `- Brand name: ${formData?.brandName || '{brand_name}'}`,
+  `- Instagram handle: ${formData?.instaHandle || '{insta_handle}'}`,
+  `- Niche: ${formData?.niche || '{niche}'}`,
+  `- Target audience: ${formData?.audience || '{audience}'}`,
+  `- Brand style: ${formData?.vibe || '{style}'}`,
+  `- Brand personality sliders: Professional ${Math.round(formData?.professionalLevel / 10) || '{p}'}/10, Minimal ${Math.round(formData?.minimalLevel / 10) || '{m}'}/10, Luxury ${Math.round(formData?.luxuryLevel / 10) || '{l}'}/10`,
+  `- Brief: ${formData?.brief || '{brief}'}`,
 ];
 
-const LoadingScreen = ({ currentStep, currentLabel }) => {
+const LoadingScreen = ({ currentStep, currentLabel, formData }) => {
+  const steps = getPipelineSteps(formData);
+  const displayStep = Math.min(currentStep + 1, steps.length);
+  
   return (
     <div className="flex flex-col items-center justify-center py-24 gap-12 w-full">
       <div className="relative">
@@ -28,12 +31,15 @@ const LoadingScreen = ({ currentStep, currentLabel }) => {
          <Sparkles className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-accent" size={32} />
       </div>
       
-      <div className="flex flex-col items-center w-full max-w-sm">
-         <h2 className="text-2xl font-headline text-center mb-2">Creating your brand identity...</h2>
-         <p className="text-accent text-sm font-ui mb-8 animate-pulse">{currentLabel}</p>
+      <div className="flex flex-col items-center w-full max-w-lg">
+         <h2 className="text-2xl font-headline text-center mb-1">Creating your brand identity...</h2>
+         <p className="text-accent text-sm font-ui mb-2 animate-pulse">{currentLabel}</p>
+         <div className="text-sm font-bold tracking-widest uppercase text-muted mb-8">
+           Step {displayStep} of {steps.length}
+         </div>
          
          <div className="flex flex-col gap-3 w-full">
-            {PIPELINE_STEPS.map((text, idx) => {
+            {steps.map((text, idx) => {
                const isComplete = currentStep > idx;
                const isCurrent = currentStep === idx;
                
@@ -67,9 +73,13 @@ const OnboardingPage = () => {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [pipelineStep, setPipelineStep] = useState(0);
-  const [pipelineLabel, setPipelineLabel] = useState(PIPELINE_STEPS[0]);
+  const [pipelineLabel, setPipelineLabel] = useState('Initializing...');
   
   const [formData, setFormData] = useState({
+    brandInputType: 'name', // 'name' or 'handle'
+    brandName: '',
+    instaHandle: '',
+    brief: '',
     niche: '',
     vibe: '',
     audience: '',
@@ -78,13 +88,24 @@ const OnboardingPage = () => {
     luxuryLevel: 50
   });
 
-  const handleNext = () => setStep(s => Math.min(s + 1, 4));
+  const handleNext = () => setStep(s => Math.min(s + 1, 5));
   const handlePrev = () => setStep(s => Math.max(s - 1, 1));
   
   const handleGenerate = async () => {
+    const isPro = localStorage.getItem('kreavia_pro_user') === 'true';
+    const count = parseInt(localStorage.getItem('kreavia_generation_count') || '0', 10);
+    const limit = isPro ? 10 : 1;
+
+    if (count >= limit) {
+      alert(`Generation limit reached! You have used ${count}/${limit} generations for your current plan. Please upgrade to create more brands.`);
+      return;
+    }
+
     setLoading(true);
     setPipelineStep(0);
     try {
+      localStorage.setItem('kreavia_generation_count', (count + 1).toString());
+      
       const dna = buildBrandDNA(formData);
       // Store Brand DNA in sessionStorage so BrandKitPage can use it
       sessionStorage.setItem('brandDNA', JSON.stringify(dna));
@@ -116,9 +137,13 @@ const OnboardingPage = () => {
   const updateForm = (key, value) => setFormData(prev => ({ ...prev, [key]: value }));
 
   const isNextDisabled = () => {
-    if (step === 1 && !formData.niche) return true;
-    if (step === 2 && !formData.vibe) return true;
-    if (step === 3 && !formData.audience) return true;
+    if (step === 1) {
+      const idEmpty = formData.brandInputType === 'name' ? !formData.brandName : !formData.instaHandle;
+      if (idEmpty || !formData.brief) return true;
+    }
+    if (step === 2 && !formData.niche) return true;
+    if (step === 3 && !formData.vibe) return true;
+    if (step === 4 && !formData.audience) return true;
     return false;
   };
 
@@ -147,24 +172,25 @@ const OnboardingPage = () => {
           <div className="w-full h-1 bg-card">
             <div 
               className="h-full bg-accent transition-all duration-500 ease-out" 
-              style={{ width: `${(step / 4) * 100}%` }}
+              style={{ width: `${(step / 5) * 100}%` }}
             ></div>
           </div>
         )}
 
         <div className="p-8 md:p-12 flex-1 flex flex-col">
           {loading ? (
-            <LoadingScreen currentStep={pipelineStep} currentLabel={pipelineLabel} />
+            <LoadingScreen currentStep={pipelineStep} currentLabel={pipelineLabel} formData={formData} />
           ) : (
             <>
               {/* Header */}
               <div className="mb-10">
-                <span className="text-secondary/60 text-xs font-bold uppercase tracking-widest mb-3 block font-ui">Step {step} of 4</span>
+                <span className="text-secondary/60 text-xs font-bold uppercase tracking-widest mb-3 block font-ui">Step {step} of 5</span>
                 <h2 className="text-3xl lg:text-4xl font-headline">
-                  {step === 1 && "What is your primary niche?"}
-                  {step === 2 && "Choose your brand style"}
-                  {step === 3 && "Who is your audience?"}
-                  {step === 4 && "Define your personality"}
+                  {step === 1 && "Tell us about your brand"}
+                  {step === 2 && "What is your primary niche?"}
+                  {step === 3 && "Choose your brand style"}
+                  {step === 4 && "Who is your audience?"}
+                  {step === 5 && "Define your personality"}
                 </h2>
               </div>
 
@@ -180,6 +206,56 @@ const OnboardingPage = () => {
                   >
                     
                     {step === 1 && (
+                      <div className="flex flex-col gap-8">
+                        <div>
+                          <p className="text-muted text-lg mb-4">How do you uniquely identify your brand?</p>
+                          <div className="flex bg-card border border-light/50 rounded-xl p-1 mb-6">
+                            <button
+                              className={`flex-1 py-2 text-sm font-ui font-medium rounded-lg transition-colors ${formData.brandInputType === 'name' ? 'bg-accent/10 text-accent' : 'text-muted hover:text-primary'}`}
+                              onClick={() => updateForm('brandInputType', 'name')}
+                            >
+                              Brand Name
+                            </button>
+                            <button
+                              className={`flex-1 py-2 text-sm font-ui font-medium rounded-lg transition-colors ${formData.brandInputType === 'handle' ? 'bg-accent/10 text-accent' : 'text-muted hover:text-primary'}`}
+                              onClick={() => updateForm('brandInputType', 'handle')}
+                            >
+                              Instagram Handle
+                            </button>
+                          </div>
+                          
+                          {formData.brandInputType === 'name' ? (
+                            <input
+                              type="text"
+                              placeholder="E.g. Aura Skincare"
+                              className="w-full bg-card border border-light/80 rounded-xl px-5 py-4 text-primary font-ui outline-none focus:border-accent transition-all"
+                              value={formData.brandName}
+                              onChange={(e) => updateForm('brandName', e.target.value)}
+                            />
+                          ) : (
+                            <input
+                              type="text"
+                              placeholder="@username"
+                              className="w-full bg-card border border-light/80 rounded-xl px-5 py-4 text-primary font-ui outline-none focus:border-accent transition-all"
+                              value={formData.instaHandle}
+                              onChange={(e) => updateForm('instaHandle', e.target.value)}
+                            />
+                          )}
+                        </div>
+
+                        <div>
+                          <p className="text-muted text-lg mb-4">Briefly describe what your brand does.</p>
+                          <textarea
+                            placeholder="We create minimalist, organic skincare products for affluent women who value self-care routines..."
+                            className="w-full h-32 bg-card border border-light/80 rounded-xl px-5 py-4 text-primary font-ui outline-none focus:border-accent transition-all resize-none"
+                            value={formData.brief}
+                            onChange={(e) => updateForm('brief', e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {step === 2 && (
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                         {nicheOptions.map(option => (
                           <motion.button 
@@ -196,7 +272,7 @@ const OnboardingPage = () => {
                       </div>
                     )}
 
-                    {step === 2 && (
+                    {step === 3 && (
                       <div className="flex flex-col gap-4">
                         {['Luxury', 'Minimal', 'Bold', 'Playful', 'Dark Aesthetic'].map(vibe => (
                           <button 
@@ -220,7 +296,7 @@ const OnboardingPage = () => {
                       </div>
                     )}
 
-                    {step === 3 && (
+                    {step === 4 && (
                       <div className="flex flex-col gap-8">
                          <p className="text-muted text-lg">Select your primary target demographic to tailor the visual appeal.</p>
                          
@@ -258,7 +334,7 @@ const OnboardingPage = () => {
                       </div>
                     )}
 
-                    {step === 4 && (
+                    {step === 5 && (
                       <div className="flex flex-col gap-10">
                          <div className="flex flex-col gap-4">
                            <div className="flex justify-between text-base font-ui">
@@ -302,7 +378,7 @@ const OnboardingPage = () => {
                   <ArrowLeft size={18} /> Back
                 </button>
                 
-                {step < 4 ? (
+                {step < 5 ? (
                   <button 
                     onClick={handleNext} 
                     disabled={isNextDisabled()}

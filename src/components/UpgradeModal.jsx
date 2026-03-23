@@ -8,7 +8,7 @@ const plans = [
     price: '$0',
     period: '/mo',
     description: 'Get started with the basics',
-    features: ['3 AI brand generations', '5 templates', 'Basic analytics', 'Limited content ideas'],
+    features: ['1 AI brand generation', '5 templates', 'Basic analytics', 'Limited content ideas'],
     cta: 'Current Plan',
     disabled: true,
   },
@@ -19,7 +19,7 @@ const plans = [
     description: 'Everything you need to grow',
     badge: 'Most Popular',
     features: [
-      'Unlimited AI generations',
+      '10 AI brand generations',
       '200+ premium templates',
       'Full analytics suite',
       'Unlimited content ideas',
@@ -56,7 +56,11 @@ const CheckoutForm = ({ plan, onBack, onSuccess }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => { setLoading(false); onSuccess(); }, 2200);
+    setTimeout(() => { 
+      setLoading(false); 
+      localStorage.setItem('kreavia_pro_user', 'true');
+      onSuccess(); 
+    }, 2200);
   };
 
   return (

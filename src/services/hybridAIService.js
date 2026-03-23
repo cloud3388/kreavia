@@ -7,14 +7,14 @@ const TEXT_PROXY_URL  = '/api/ai-text';
 const IMAGE_PROXY_URL = '/api/ai-image';
 
 // Direct URLs (via Vite proxy in vite.config.js)
-const DIRECT_TEXT_URL  = '/nemotron-api/v1/chat/completions';
+const DIRECT_TEXT_URL  = '/groq-api/openai/v1/chat/completions';
 const DIRECT_IMAGE_URL = '/nvidia-api/v1/genai/stabilityai/stable-diffusion-xl';
 
-const nemotronKey = import.meta.env.VITE_NEMOTRON_API_KEY;
+const groqKey = import.meta.env.VITE_GROQ_API_KEY;
 const imageKey    = import.meta.env.VITE_NVIDIA_API_KEY;
 const useProxy    = import.meta.env.VITE_USE_AI_PROXY === 'true';
 
-const isMock = (!nemotronKey || nemotronKey.startsWith('nvapi-YOUR')) && (!imageKey || imageKey.startsWith('nvapi-YOUR'));
+const isMock = (!groqKey || groqKey.startsWith('gsk_')) === false && (!imageKey || imageKey.startsWith('nvapi-YOUR'));
 
 /**
  * Generates brand content using the hybrid flow.
@@ -65,14 +65,14 @@ export const generateHybridContent = async (dna, type = 'post', onProgress = () 
       const res = await fetch(DIRECT_TEXT_URL, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${nemotronKey}`,
+          'Authorization': `Bearer ${groqKey}`,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
         body: JSON.stringify({
-          model: 'nvidia/nemotron-3-super-120b-a12b',
+          model: 'llama-3.3-70b-versatile',
           messages: [{ role: 'user', content: prompt }],
-          temperature: 0.5, top_p: 0.7, max_tokens: 1024,
+          temperature: 1, top_p: 1, max_tokens: 1024,
         }),
       });
       if (!res.ok) throw new Error('Direct text generation failed');

@@ -165,31 +165,63 @@ const LandingPage = () => {
            <p className="text-xl text-muted font-body font-medium">Everything you need to build your brand identity.</p>
          </div>
          
-         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 max-w-4xl w-full">
-            <div className="glass-card p-12 bg-surface flex flex-col gap-6">
-               <div className="text-accent text-[10px] font-bold uppercase tracking-widest">Free Plan</div>
-               <div className="text-5xl font-headline font-bold text-primary">$0<span className="text-lg text-muted font-medium">/mo</span></div>
-               <ul className="flex flex-col gap-4 my-4">
-                  <li className="flex items-center gap-3 text-muted text-sm font-medium"><CheckCircle2 size={16} className="text-green-500" /> 3 AI Generations</li>
-                  <li className="flex items-center gap-3 text-muted text-sm font-medium"><CheckCircle2 size={16} className="text-green-500" /> Basic Templates</li>
-                  <li className="flex items-center gap-3 text-muted text-sm font-medium"><CheckCircle2 size={16} className="text-green-500" /> PNG Export</li>
+         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl w-full">
+            {/* Free Plan */}
+            <div className="glass-card p-10 bg-surface flex flex-col gap-5 border border-light/50 relative">
+               <div className="text-muted text-[10px] font-bold uppercase tracking-widest">Free</div>
+               <div className="flex flex-col mb-2">
+                 <div className="text-4xl font-headline font-bold text-primary">$0<span className="text-base text-muted font-medium">/mo</span></div>
+                 <p className="text-xs text-muted mt-1">Get started with the basics</p>
+               </div>
+               <div className="h-px bg-light/30 w-full mb-2"></div>
+               <ul className="flex flex-col gap-3 flex-1">
+                  <li className="flex items-start gap-3 text-primary text-sm font-medium"><CheckCircle2 size={16} className="text-muted shrink-0 mt-0.5" /> 1 AI brand generation</li>
+                  <li className="flex items-start gap-3 text-primary text-sm font-medium"><CheckCircle2 size={16} className="text-muted shrink-0 mt-0.5" /> 5 templates</li>
+                  <li className="flex items-start gap-3 text-primary text-sm font-medium"><CheckCircle2 size={16} className="text-muted shrink-0 mt-0.5" /> Basic analytics</li>
+                  <li className="flex items-start gap-3 text-primary text-sm font-medium"><CheckCircle2 size={16} className="text-muted shrink-0 mt-0.5" /> Limited content ideas</li>
                </ul>
-               <Link to="/signup" className="btn btn-outline w-full h-14 uppercase font-bold tracking-widest text-xs">Get Started</Link>
+               <Link to="/signup" className="btn btn-outline border-light w-full h-12 uppercase font-bold tracking-widest text-[11px] mt-4">Current Plan</Link>
             </div>
             
-            <div className="glass-card p-12 bg-primary text-secondary flex flex-col gap-6 relative overflow-hidden" style={{ backgroundColor: '#3E2723' }}>
-               <div className="absolute top-0 right-0 p-4">
-                  <span className="bg-accent text-secondary text-[9px] font-bold px-3 py-1 rounded-full uppercase tracking-widest">Popular</span>
+            {/* Pro Plan */}
+            <div className="glass-card p-10 bg-accent/5 flex flex-col gap-5 border border-accent relative overflow-hidden shadow-[0_0_30px_rgba(198,169,107,0.15)]">
+               <div className="absolute top-0 right-0 left-0 flex justify-center -translate-y-1/2">
+                  <span className="bg-accent text-primary text-[10px] font-bold px-4 py-1 rounded-full uppercase tracking-widest shadow-md">Most Popular</span>
                </div>
-               <div className="text-accent/50 text-[10px] font-bold uppercase tracking-widest">Pro Creator</div>
-               <div className="text-5xl font-headline font-bold">$19<span className="text-lg text-accent/50 font-medium">/mo</span></div>
-               <ul className="flex flex-col gap-4 my-4">
-                  <li className="flex items-center gap-3 text-secondary/70 text-sm font-medium"><CheckCircle2 size={16} className="text-accent" /> Unlimited AI Generations</li>
-                  <li className="flex items-center gap-3 text-secondary/70 text-sm font-medium"><CheckCircle2 size={16} className="text-accent" /> SVG Vector Exports</li>
-                  <li className="flex items-center gap-3 text-secondary/70 text-sm font-medium"><CheckCircle2 size={16} className="text-accent" /> Premium Logo Mockups</li>
-                  <li className="flex items-center gap-3 text-secondary/70 text-sm font-medium"><CheckCircle2 size={16} className="text-accent" /> Full Brand Deck PDF</li>
+               <div className="text-accent text-[10px] font-bold uppercase tracking-widest pt-2">Pro</div>
+               <div className="flex flex-col mb-2">
+                 <div className="text-4xl font-headline font-bold text-primary">$29<span className="text-base text-muted font-medium">/mo</span></div>
+                 <p className="text-xs text-muted mt-1">Everything you need to grow</p>
+               </div>
+               <div className="h-px bg-light/30 w-full mb-2"></div>
+               <ul className="flex flex-col gap-3 flex-1">
+                  <li className="flex items-start gap-3 text-primary text-sm font-medium"><CheckCircle2 size={16} className="text-accent shrink-0 mt-0.5" /> 10 AI brand generations</li>
+                  <li className="flex items-start gap-3 text-primary text-sm font-medium"><CheckCircle2 size={16} className="text-accent shrink-0 mt-0.5" /> 200+ premium templates</li>
+                  <li className="flex items-start gap-3 text-primary text-sm font-medium"><CheckCircle2 size={16} className="text-accent shrink-0 mt-0.5" /> Full analytics suite</li>
+                  <li className="flex items-start gap-3 text-primary text-sm font-medium"><CheckCircle2 size={16} className="text-accent shrink-0 mt-0.5" /> Unlimited content ideas</li>
+                  <li className="flex items-start gap-3 text-primary text-sm font-medium"><CheckCircle2 size={16} className="text-accent shrink-0 mt-0.5" /> Custom brand guidelines PDF</li>
+                  <li className="flex items-start gap-3 text-primary text-sm font-medium"><CheckCircle2 size={16} className="text-accent shrink-0 mt-0.5" /> Priority AI support</li>
                </ul>
-               <Link to="/signup" className="btn btn-primary w-full h-14 bg-accent uppercase font-bold tracking-widest text-xs shadow-glow">Upgrade Now</Link>
+               <Link to="/signup" className="btn btn-primary w-full h-12 bg-accent uppercase font-bold tracking-widest text-[11px] shadow-glow hover:scale-[1.02] mt-4">Upgrade to Pro</Link>
+            </div>
+
+            {/* Agency Plan */}
+            <div className="glass-card p-10 bg-surface flex flex-col gap-5 border border-light/50 relative">
+               <div className="text-muted text-[10px] font-bold uppercase tracking-widest">Agency</div>
+               <div className="flex flex-col mb-2">
+                 <div className="text-4xl font-headline font-bold text-primary">$99<span className="text-base text-muted font-medium">/mo</span></div>
+                 <p className="text-xs text-muted mt-1">For teams and brands</p>
+               </div>
+               <div className="h-px bg-light/30 w-full mb-2"></div>
+               <ul className="flex flex-col gap-3 flex-1">
+                  <li className="flex items-start gap-3 text-primary text-sm font-medium"><CheckCircle2 size={16} className="text-muted shrink-0 mt-0.5" /> Everything in Pro</li>
+                  <li className="flex items-start gap-3 text-primary text-sm font-medium"><CheckCircle2 size={16} className="text-muted shrink-0 mt-0.5" /> Up to 10 brand profiles</li>
+                  <li className="flex items-start gap-3 text-primary text-sm font-medium"><CheckCircle2 size={16} className="text-muted shrink-0 mt-0.5" /> Team collaboration</li>
+                  <li className="flex items-start gap-3 text-primary text-sm font-medium"><CheckCircle2 size={16} className="text-muted shrink-0 mt-0.5" /> White-label exports</li>
+                  <li className="flex items-start gap-3 text-primary text-sm font-medium"><CheckCircle2 size={16} className="text-muted shrink-0 mt-0.5" /> Dedicated account manager</li>
+                  <li className="flex items-start gap-3 text-primary text-sm font-medium"><CheckCircle2 size={16} className="text-muted shrink-0 mt-0.5" /> API access</li>
+               </ul>
+               <a href="mailto:sales@brandkitai.com" className="btn btn-outline border-light w-full h-12 uppercase font-bold tracking-widest text-[11px] mt-4">Contact Sales</a>
             </div>
          </div>
        </section>

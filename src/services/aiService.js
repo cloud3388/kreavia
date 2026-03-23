@@ -49,8 +49,8 @@ export const generateBrandIdentity = async (userInputs = {}, context = {}) => {
 
   // 1. Generate real AI logos
   const logoPrompts = [
-    `Luxurious high-end minimalist vector logo for "${brandName}", ${industry}, ${style} style, white background, high contrast, clean lines`,
-    `Minimalist abstract symbol for "${brandName}", ${industry}, ${style}, geometric, sophisticated, vector style`,
+    `A minimalist and luxurious logo mark, sleek geometric shapes, sophisticated aesthetic, black and white with a subtle hint of gold, premium brand identity, high-end editorial style, clean lines, vector art style. for "${brandName}"`,
+    `A minimalist abstract symbol, sleek geometric shapes, sophisticated aesthetic, black and white with a subtle hint of gold, premium brand identity, clean lines, vector art style. for "${brandName}"`,
   ];
 
   try {
@@ -71,23 +71,23 @@ export const generateBrandIdentity = async (userInputs = {}, context = {}) => {
       brandName,
       industry,
       colors: {
-        primary:   '#1A1A1A', // Onyx
-        secondary: '#FBFBFD', // Snow
-        accent:    '#C6A96B', // Gold
-        highlight: '#F5F5F7', // Smoke
+        primary:   '#0A0A0A', // Dark
+        secondary: '#FAFAFA', // Light
+        accent:    '#CBA135', // Gold
+        highlight: '#2A2A2A', // Darker gray
       },
       typography: {
         headline: 'Playfair Display',
         body:     'Inter',
-        ui:       'Satoshi',
+        ui:       'JetBrains Mono',
       },
       logos: [
         { type: 'Primary Logo', url: logo1, style: 'vector' },
         { type: 'Minimal Symbol', url: logo2, style: 'symbol' },
       ],
       brandScore:     95,
-      brandArchetype: 'The Visionary',
-      brandVoice:     'Sophisticated, minimal, quietly confident',
+      brandArchetype: 'The Magician',
+      brandVoice:     'Sophisticated, Visionary, Direct',
     };
 
     await persistGeneration({
@@ -106,12 +106,12 @@ export const generateBrandIdentity = async (userInputs = {}, context = {}) => {
     return {
       brandName,
       industry,
-      colors: { primary: '#1A1A1A', secondary: '#FBFBFD', accent: '#C6A96B', highlight: '#F5F5F7' },
-      typography: { headline: 'Playfair Display', body: 'Inter', ui: 'Satoshi' },
-      logos: [{ type: 'Fallback', url: `https://placehold.co/400x400/1A1A1A/C6A96B?text=${brandName[0]}`, style: 'vector' }],
-      brandScore: 80,
-      brandArchetype: 'The Creator',
-      brandVoice: 'Creative and professional',
+      colors: { primary: '#0A0A0A', secondary: '#FAFAFA', accent: '#CBA135', highlight: '#2A2A2A' },
+      typography: { headline: 'Playfair Display', body: 'Inter', ui: 'JetBrains Mono' },
+      logos: [{ type: 'Fallback', url: `https://placehold.co/400x400/0A0A0A/CBA135?text=${brandName[0]}`, style: 'vector' }],
+      brandScore: 90,
+      brandArchetype: 'The Magician',
+      brandVoice: 'Sophisticated, Visionary, Direct',
     };
   }
 };
@@ -211,4 +211,33 @@ export const generateBio = async (niche, tone, context = {}) => {
   });
 
   return new Promise(resolve => setTimeout(() => resolve(bios), 800));
+};
+
+// ──────────────────────────────────────────
+// Templates Generation
+// ──────────────────────────────────────────
+export const generateTemplates = async (brandData, context = {}) => {
+  const brandName = brandData?.brandName || 'Brand';
+  const niche = brandData?.industry || 'lifestyle';
+  const tone = brandData?.brandVoice || 'luxury';
+
+  const templates = [
+    { id: 1, type: 'quote', name: 'Daily Inspiration', text: `The essence of ${niche} is not in doing more, but in being more.` },
+    { id: 2, type: 'reel_cover', name: 'The Masterclass', text: `THE ${brandName.toUpperCase()} BLUEPRINT` },
+    { id: 3, type: 'story', name: 'Quick Tip', text: `${brandName} RESOURCES` },
+    { id: 4, type: 'carousel', name: 'Value Swipe', text: `3 Ways to Elevate Your ${niche.charAt(0).toUpperCase() + niche.slice(1)} Game →` },
+    { id: 5, type: 'educational', name: 'Pro Wisdom', text: `How to maintain consistency across all your platforms with ${brandName}.` },
+    { id: 6, type: 'quote', name: 'Bold Statement', text: `${tone.charAt(0).toUpperCase() + tone.slice(1)} is not just an aesthetic, it's a lifestyle.` }
+  ];
+
+  await persistGeneration({
+    ...context,
+    generationType: 'templates',
+    prompt: `brand:${brandName},niche:${niche}`,
+    resultData: { templates },
+    model: 'gpt-4o-mock',
+    creditsUsed: 1,
+  });
+
+  return new Promise(resolve => setTimeout(() => resolve(templates), 1500));
 };

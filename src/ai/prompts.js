@@ -51,17 +51,19 @@ Return valid JSON only. No extra text. No markdown fences.
 // 2. Logo Generator Prompt (Image Model)
 // ──────────────────────────────────────────
 export const buildLogoPrompt = (dna, palette, logoType = 'monogram') => `
-Minimal luxury ${logoType} logo for a ${dna.niche} creator brand.
+Minimal luxury ${logoType} logo for a ${dna.niche} creator brand named "${dna.brand_name}".
 
 Brand personality: ${dna.brand_personality}
 Style: ${dna.style}
 Visual energy: ${dna.visual_energy}
+Brand Brief: ${dna.brief}
 
 Design requirements:
 - minimal, clean, modern
 - premium aesthetic
 - Instagram and TikTok ready
 - scalable at small sizes
+- the logo text must read exactly "${dna.brand_name}"
 
 Color palette:
 Primary: ${palette.primary}

@@ -26,6 +26,8 @@ const TemplateRenderer = ({ type, brandData: rawBrand, text, layout = 'centered'
   const secondary = brandData.colors?.secondary || '#FBFBFD';
   const headlineFont = brandData.typography?.headline || 'Playfair Display';
   const bodyFont = brandData.typography?.body || 'Inter';
+  const customTextColor = brandData.typography?.color;
+  const overrideBg = brandData.colors?.backgroundOverride;
 
   const renderShapes = () => {
     if (!brandData.shapes || !Array.isArray(brandData.shapes)) return null;
@@ -53,7 +55,7 @@ const TemplateRenderer = ({ type, brandData: rawBrand, text, layout = 'centered'
     <div 
       id="template-canvas"
       className="w-full h-full flex flex-col p-12 relative overflow-hidden"
-      style={{ backgroundColor: bg }}
+      style={{ backgroundColor: overrideBg || bg }}
     >
       {/* Background Image / Custom BG */}
       {(brandData.customBg || brandData.imageUrl) && (
@@ -65,11 +67,10 @@ const TemplateRenderer = ({ type, brandData: rawBrand, text, layout = 'centered'
 
       {renderShapes()}
 
-      <div className="absolute top-10 left-10 text-6xl opacity-20 font-serif z-10" style={{ color: accent }}>“</div>
       <div className={`flex-1 flex flex-col z-10 ${layout === 'centered' ? 'items-center justify-center text-center' : 'items-start justify-center text-left'}`}>
         <h2 
           className="text-3xl md:text-5xl font-bold leading-tight"
-          style={{ fontFamily: headlineFont, color: (brandData.customBg || brandData.imageUrl) ? '#FFFFFF' : primary }}
+          style={{ fontFamily: headlineFont, color: customTextColor || ((brandData.customBg || brandData.imageUrl) ? '#FFFFFF' : primary) }}
         >
           {text || "The ultimate expression of simplicity is sophistication."}
         </h2>
@@ -81,25 +82,7 @@ const TemplateRenderer = ({ type, brandData: rawBrand, text, layout = 'centered'
         <div className="w-16 h-1.5 bg-accent mt-10 rounded-full" style={{ backgroundColor: accent }}></div>
       </div>
 
-      <div className="mt-auto flex items-center justify-between z-10">
-        <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center border border-light overflow-hidden shadow-sm">
-            {(brandData.productImage || brandData.logos?.[0]?.url) ? (
-                <img src={brandData.productImage || brandData.logos[0].url} alt="Logo" className="w-full h-full object-cover" />
-            ) : (
-                <div className="w-5 h-5 bg-accent rounded-full"></div>
-            )}
-            </div>
-            <span className="text-[11px] font-black uppercase tracking-widest opacity-80" style={{ color: (brandData.customBg || brandData.imageUrl) ? '#FFFFFF' : primary, fontFamily: bodyFont }}>
-            {brandData.brandName || "Brand"}
-            </span>
-        </div>
-        {(brandData.customBg || brandData.imageUrl) && (
-             <div className="w-8 h-8 rounded-lg bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/20">
-                <span className="text-white text-xs">✦</span>
-             </div>
-        )}
-      </div>
+      {/* Footer Branding Removed */}
     </div>
   );
 
@@ -107,7 +90,7 @@ const TemplateRenderer = ({ type, brandData: rawBrand, text, layout = 'centered'
     <div 
       id="template-canvas"
       className="w-full h-full flex flex-col relative overflow-hidden group"
-      style={{ backgroundColor: primary }}
+      style={{ backgroundColor: overrideBg || primary }}
     >
       {/* Background flare / Custom BG */}
       <div className="absolute inset-0 bg-gradient-to-tr from-accent/30 to-transparent"></div>
@@ -121,24 +104,15 @@ const TemplateRenderer = ({ type, brandData: rawBrand, text, layout = 'centered'
       <div className="flex-1 flex flex-col items-center justify-center text-center p-10 z-10">
         <span className="text-[11px] font-black uppercase tracking-[0.4em] text-accent mb-6">Premium Series</span>
         <h2 
-          className="text-4xl md:text-7xl font-black uppercase tracking-tighter leading-none text-secondary drop-shadow-2xl"
-          style={{ fontFamily: headlineFont }}
+          className="text-4xl md:text-7xl font-black uppercase tracking-tighter leading-none drop-shadow-2xl"
+          style={{ fontFamily: headlineFont, color: customTextColor || secondary }}
         >
           {text || "THE ART OF CREATION"}
         </h2>
         <div className="w-32 h-1.5 bg-accent mt-8 shadow-glow" style={{ backgroundColor: accent }}></div>
       </div>
 
-      <div className="p-8 bg-black/40 backdrop-blur-md border-t border-white/10 flex items-center justify-between z-10">
-        <span className="text-xs font-black tracking-widest text-secondary/80 uppercase" style={{ fontFamily: bodyFont }}>Vol. 2026 • Edition 01</span>
-        <div className="w-12 h-12 rounded-xl border border-white/30 flex items-center justify-center bg-white/5">
-            {(brandData.productImage || brandData.logos?.[0]?.url) ? (
-                <img src={brandData.productImage || brandData.logos[0].url} alt="Logo" className="w-8 h-8 object-contain" />
-            ) : (
-                <div className="w-4 h-4 bg-accent rounded-full"></div>
-            )}
-        </div>
-      </div>
+      {/* Footer Branding Removed */}
     </div>
   );
 
@@ -146,7 +120,7 @@ const TemplateRenderer = ({ type, brandData: rawBrand, text, layout = 'centered'
     <div 
       id="template-canvas"
       className="w-full h-full flex flex-col items-center justify-center p-12 relative overflow-hidden"
-      style={{ backgroundColor: bg }}
+      style={{ backgroundColor: overrideBg || bg }}
     >
       {renderShapes()}
 
@@ -162,7 +136,7 @@ const TemplateRenderer = ({ type, brandData: rawBrand, text, layout = 'centered'
             )}
          </div>
       </div>
-      <h3 className="text-2xl font-black tracking-widest text-center uppercase z-10" style={{ fontFamily: headlineFont, color: primary }}>
+      <h3 className="text-2xl font-black tracking-widest text-center uppercase z-10" style={{ fontFamily: headlineFont, color: customTextColor || primary }}>
         {text || "Resources"}
       </h3>
       <div className="absolute bottom-0 inset-x-0 h-2 bg-accent" style={{ backgroundColor: accent }}></div>
@@ -173,7 +147,7 @@ const TemplateRenderer = ({ type, brandData: rawBrand, text, layout = 'centered'
     <div 
       id="template-canvas"
       className="w-full h-full flex flex-col p-12 relative overflow-hidden"
-      style={{ backgroundColor: secondary }}
+      style={{ backgroundColor: overrideBg || secondary }}
     >
       {renderShapes()}
 
@@ -184,31 +158,16 @@ const TemplateRenderer = ({ type, brandData: rawBrand, text, layout = 'centered'
       <div className="flex-1 flex flex-col z-10">
         <h2 
           className="text-4xl md:text-5xl font-black leading-[1.05] mb-8 tracking-tight"
-          style={{ fontFamily: headlineFont, color: primary }}
+          style={{ fontFamily: headlineFont, color: customTextColor || primary }}
         >
           {text || "3 Ways to Elevate Your Visual Output →"}
         </h2>
-        <p className="text-base opacity-70 leading-relaxed max-w-[320px] font-medium" style={{ fontFamily: bodyFont, color: primary }}>
+        <p className="text-base opacity-70 leading-relaxed max-w-[320px] font-medium" style={{ fontFamily: bodyFont, color: customTextColor || primary }}>
             Consistency isn't about being perfect, it's about showing up with a recognizable DNA.
         </p>
       </div>
 
-      <div className="mt-auto border-t border-light/50 pt-8 flex items-center justify-between z-10">
-        <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-highlight flex items-center justify-center border border-light/20 shadow-sm" style={{ backgroundColor: bg }}>
-                {(brandData.productImage || brandData.logos?.[0]?.url) ? (
-                    <img src={brandData.productImage || brandData.logos[0].url} alt="Logo" className="w-10 h-10 object-contain" />
-                ) : (
-                    <div className="w-5 h-5 bg-accent rounded-full" style={{ backgroundColor: accent }}></div>
-                )}
-            </div>
-            <div className="flex flex-col">
-                <span className="text-[11px] font-black uppercase tracking-widest" style={{ color: primary }}>{brandData.brandName || "KREAVIA"}</span>
-                <span className="text-[10px] text-muted font-bold">@official.{brandData.brandName?.toLowerCase() || 'brand'}</span>
-            </div>
-        </div>
-        <div className="w-2 h-2 rounded-full bg-accent animate-pulse" style={{ backgroundColor: accent }}></div>
-      </div>
+      {/* Footer Branding Removed */}
     </div>
   );
 
@@ -216,7 +175,7 @@ const TemplateRenderer = ({ type, brandData: rawBrand, text, layout = 'centered'
     <div 
       id="template-canvas"
       className="w-full h-full flex flex-col p-10 relative overflow-hidden"
-      style={{ backgroundColor: bg }}
+      style={{ backgroundColor: overrideBg || bg }}
     >
       <div className="absolute top-0 right-0 w-48 h-48 bg-accent/10 rounded-full -mr-24 -mt-24 blur-3xl" style={{ backgroundColor: `${accent}33` }}></div>
       
@@ -227,7 +186,7 @@ const TemplateRenderer = ({ type, brandData: rawBrand, text, layout = 'centered'
       </div>
       <h2 
         className="text-3xl md:text-4xl font-black leading-tight mb-10 z-10"
-        style={{ fontFamily: headlineFont, color: primary }}
+        style={{ fontFamily: headlineFont, color: customTextColor || primary }}
       >
         {text || "How to maintain brand consistency across all platforms."}
       </h2>
@@ -241,12 +200,7 @@ const TemplateRenderer = ({ type, brandData: rawBrand, text, layout = 'centered'
           </div>
         ))}
       </div>
-      <div className="mt-auto pt-8 flex items-center justify-between border-t border-light/50 z-10">
-          <span className="text-[11px] font-black uppercase tracking-widest opacity-60" style={{ color: primary }}>{brandData.brandName || "Brand"}</span>
-          <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center shadow-lg transform hover:rotate-12 transition-transform" style={{ backgroundColor: primary }}>
-             <span className="text-secondary text-base" style={{ color: bg }}>✧</span>
-          </div>
-      </div>
+      {/* Footer Branding Removed */}
     </div>
   );
 

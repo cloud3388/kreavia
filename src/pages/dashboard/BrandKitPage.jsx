@@ -151,22 +151,26 @@ const BrandKitPage = () => {
                     </div>
                  </div>
                  <img 
-                   src={logoAsset} 
+                   src={brandData?.logos?.[0]?.url || brandData?.logo || logoAsset} 
                    alt="Primary Logo" 
-                   className="w-48 h-48 object-contain drop-shadow-2xl group-hover:scale-105 transition-transform duration-700" 
+                   className="w-48 h-48 object-contain drop-shadow-2xl group-hover:scale-105 transition-transform duration-700 rounded-xl mix-blend-multiply" 
                  />
                  
                  <div className="absolute inset-x-0 bottom-0 p-6 flex gap-3 h-20 bg-gradient-to-t from-primary to-transparent backdrop-blur-md border-t border-white/5">
                     <a 
-                      href={logoAsset} 
-                      download="Kreavia-Logo.png"
+                      href={brandData?.logos?.[0]?.url || brandData?.logo || logoAsset} 
+                      download="Brand-Logo.png"
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="btn btn-primary text-[10px] uppercase font-bold tracking-widest flex-1 h-10 shadow-glow flex items-center justify-center gap-2 border border-accent/20"
                     >
                       <Download size={14} /> PNG/SVG
                     </a>
                     <a 
-                      href={logoAsset} 
-                      download="Kreavia-Logo-HQ.png"
+                      href={brandData?.logos?.[0]?.url || brandData?.logo || logoAsset} 
+                      download="Brand-Logo-HQ.png"
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="btn btn-outline text-[10px] uppercase font-bold tracking-widest flex-1 h-10 border-accent/20 text-accent hover:border-accent flex items-center justify-center gap-2 bg-surface/10"
                     >
                       <FileText size={14} /> HQ Print
@@ -286,18 +290,12 @@ const BrandKitPage = () => {
                 <div className="relative z-10 overflow-hidden">
                    <div className="text-accent/60 text-[9px] font-black uppercase tracking-[0.2em] mb-6">Tone of Voice</div>
                    <div className="flex flex-col gap-3">
-                      <div className="flex items-center gap-3 group/item">
-                         <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse"></div>
-                         <span className="text-sm font-bold tracking-wide text-white group-hover/item:text-accent transition-colors">Sophisticated & Elite</span>
-                      </div>
-                      <div className="flex items-center gap-3 group/item">
-                         <div className="w-1.5 h-1.5 rounded-full bg-accent/40"></div>
-                         <span className="text-sm font-bold tracking-wide text-white/90 group-hover/item:text-accent transition-colors">Articulate & Poised</span>
-                      </div>
-                      <div className="flex items-center gap-3 group/item">
-                         <div className="w-1.5 h-1.5 rounded-full bg-accent/40"></div>
-                         <span className="text-sm font-bold tracking-wide text-white/80 group-hover/item:text-accent transition-colors">Minimalist Elegance</span>
-                      </div>
+                      {(brandData?.brandVoice || 'Sophisticated, Minimal, Confident').split(',').map((tone, idx) => (
+                        <div key={idx} className="flex items-center gap-3 group/item">
+                           <div className={`w-1.5 h-1.5 rounded-full ${idx === 0 ? 'bg-accent animate-pulse' : 'bg-accent/40'}`}></div>
+                           <span className="text-sm font-bold tracking-wide text-white/90 group-hover/item:text-accent transition-colors">{tone.trim()}</span>
+                        </div>
+                      ))}
                    </div>
                 </div>
                 <div className="mt-auto relative z-10">

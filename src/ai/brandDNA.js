@@ -68,6 +68,10 @@ const sliderToLabel = (value) => {
 // ──────────────────────────────────────────
 export const buildBrandDNA = (formData) => {
   const {
+    brandInputType = 'name',
+    brandName = '',
+    instaHandle = '',
+    brief = '',
     niche = 'lifestyle',
     vibe = 'luxury',
     audience = 'Entrepreneurs',
@@ -82,6 +86,9 @@ export const buildBrandDNA = (formData) => {
 
   const dna = {
     // Core identity
+    brand_name: brandInputType === 'name' ? brandName : instaHandle,
+    brand_input_type: brandInputType,
+    brief,
     niche,
     style:             vibe,
     audience,
