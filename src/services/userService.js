@@ -44,3 +44,8 @@ export const getUserPlan = async (userId) => {
   if (isMockMode) return { data: { plan: 'free', credits: 3 }, error: null };
   return supabase.from('users').select('plan, credits').eq('id', userId).single();
 };
+
+export const getUserSubscription = async (userId) => {
+  if (isMockMode) return { data: null, error: null };
+  return supabase.from('subscriptions').select('*').eq('user_id', userId).single();
+};

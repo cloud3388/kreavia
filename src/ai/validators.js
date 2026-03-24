@@ -147,14 +147,15 @@ export const validateContentSafety = (text) => {
 };
 
 export const validateIdeas = (ideas) => {
-  if (!Array.isArray(ideas) || ideas.length === 0) {
+  const list = Array.isArray(ideas) ? ideas : (ideas?.content_ideas || ideas?.ideas || ideas?.data || []);
+  if (!Array.isArray(list) || list.length === 0) {
     return { valid: false, errors: ['No ideas returned'] };
   }
-  const filtered = ideas.filter(idea => {
-    const text = typeof idea === 'string' ? idea : idea.title || '';
+  const filtered = list.filter(idea => {
+    const text = typeof idea === 'string' ? idea : (idea?.title || idea?.hook || '');
     return validateContentSafety(text).safe;
   });
-  return { valid: true, data: filtered, filtered: ideas.length - filtered.length };
+  return { valid: true, data: filtered, filtered: list.length - filtered.length };
 };
 
 // ──────────────────────────────────────────
@@ -164,8 +165,16 @@ const BANNED_HASHTAGS = new Set(['#follow4follow', '#like4like', '#f4f', '#l4l',
 const HASHTAG_REGEX = /^#[a-zA-Z0-9_]+$/;
 
 export const validateHashtags = (hashtags) => {
-  return hashtags.filter(h => {
-    const tag = typeof h === 'string' ? h : h.tag;
+  // Ensure we are working with an array, even if AI wrapped it in an object
+  const list = Array.isArray(hashtags) 
+    ? hashtags 
+    : (hashtags?.hashtags || hashtags?.data || []);
+    
+  if (!Array.isArray(list)) return [];
+
+  return list.filter(h => {
+    const tag = typeof h === 'string' ? h : (h?.tag || '');
+    if (!tag) return false;
     return HASHTAG_REGEX.test(tag) && !BANNED_HASHTAGS.has(tag.toLowerCase());
   });
 };

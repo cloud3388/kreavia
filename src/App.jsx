@@ -5,6 +5,7 @@ import ProtectedRoute from './components/auth/ProtectedRoute';
 import MainLayout from './components/layout/MainLayout';
 import DashboardLayout from './components/layout/DashboardLayout';
 import LandingPage from './pages/LandingPage';
+import PricingPage from './pages/PricingPage';
 import OnboardingPage from './pages/OnboardingPage';
 import LoginPage from './pages/auth/LoginPage';
 import SignUpPage from './pages/auth/SignUpPage';
@@ -13,6 +14,8 @@ import TemplatesPage from './pages/dashboard/TemplatesPage';
 import ContentEnginePage from './pages/dashboard/ContentEnginePage';
 import AnalyticsPage from './pages/dashboard/AnalyticsPage';
 import SettingsPage from './pages/dashboard/SettingsPage';
+import PublicBrandKitPage from './pages/PublicBrandKitPage';
+import SuccessPage from './pages/SuccessPage';
 
 function App() {
   return (
@@ -22,6 +25,7 @@ function App() {
           {/* Public Routes */}
           <Route element={<MainLayout />}>
             <Route path="/" element={<LandingPage />} />
+            <Route path="/pricing" element={<PricingPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignUpPage />} />
             <Route 
@@ -33,6 +37,10 @@ function App() {
               } 
             />
           </Route>
+
+          {/* Standalone Route (No Headers or Navbars) */}
+          <Route path="/brand/:slug" element={<PublicBrandKitPage />} />
+          <Route path="/payment/success" element={<SuccessPage />} />
 
           {/* Dashboard Routes */}
           <Route 

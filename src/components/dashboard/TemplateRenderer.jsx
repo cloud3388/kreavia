@@ -1,4 +1,5 @@
 import React from 'react';
+import RichTextEditor from './RichTextEditor';
 
 /**
  * TemplateRenderer
@@ -17,7 +18,21 @@ const DEFAULT_BRAND = {
   logos: [],
 };
 
-const TemplateRenderer = ({ type, brandData: rawBrand, text, layout = 'centered' }) => {
+const TemplateRenderer = ({ 
+  type, 
+  brandData: rawBrand, 
+  text, 
+  onUpdateText,
+  subHeadline,
+  onUpdateSubHeadline,
+  badgeText,
+  onUpdateBadgeText,
+  extraBody,
+  onUpdateExtraBody,
+  layout = 'centered',
+  selectedElementId,
+  onSelectId 
+}) => {
   const brandData = rawBrand || DEFAULT_BRAND;
 
   const bg = brandData.colors?.highlight || '#F5F5F7';
@@ -28,6 +43,7 @@ const TemplateRenderer = ({ type, brandData: rawBrand, text, layout = 'centered'
   const bodyFont = brandData.typography?.body || 'Inter';
   const customTextColor = brandData.typography?.color;
   const overrideBg = brandData.colors?.backgroundOverride;
+  const bgOpacity = brandData.bgOpacity !== undefined ? brandData.bgOpacity : 0.6;
 
   const renderShapes = () => {
     if (!brandData.shapes || !Array.isArray(brandData.shapes)) return null;
@@ -55,12 +71,16 @@ const TemplateRenderer = ({ type, brandData: rawBrand, text, layout = 'centered'
     <div 
       id="template-canvas"
       className="w-full h-full flex flex-col p-12 relative overflow-hidden"
-      style={{ backgroundColor: overrideBg || bg }}
+      style={{ background: overrideBg || bg }}
     >
       {/* Background Image / Custom BG */}
       {(brandData.customBg || brandData.imageUrl) && (
         <div className="absolute inset-0 z-0">
-          <img src={brandData.customBg || brandData.imageUrl} alt="" className="w-full h-full object-cover opacity-60 mix-blend-multiply" />
+          {(brandData.customBg || brandData.imageUrl).includes('transparenttextures.com') ? (
+             <div className="w-full h-full mix-blend-multiply" style={{ backgroundImage: `url(${brandData.customBg || brandData.imageUrl})`, backgroundRepeat: 'repeat', opacity: bgOpacity }} />
+          ) : (
+             <img src={brandData.customBg || brandData.imageUrl} alt="" className="w-full h-full object-cover mix-blend-multiply" style={{ opacity: bgOpacity }} />
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
         </div>
       )}
@@ -68,21 +88,37 @@ const TemplateRenderer = ({ type, brandData: rawBrand, text, layout = 'centered'
       {renderShapes()}
 
       <div className={`flex-1 flex flex-col z-10 ${layout === 'centered' ? 'items-center justify-center text-center' : 'items-start justify-center text-left'}`}>
-        <h2 
+        <div 
           className="text-3xl md:text-5xl font-bold leading-tight"
-          style={{ fontFamily: headlineFont, color: customTextColor || ((brandData.customBg || brandData.imageUrl) ? '#FFFFFF' : primary) }}
+          style={{ width: '100%', fontFamily: headlineFont, color: customTextColor || ((brandData.customBg || brandData.imageUrl) ? '#FFFFFF' : primary) }}
         >
-          {text || "The ultimate expression of simplicity is sophistication."}
-        </h2>
+          <RichTextEditor 
+             element={{ id: 'main-text', content: text || "The ultimate expression of simplicity is sophistication.", fontSize: 48, fontFamily: headlineFont }}
+             brandData={brandData}
+             isSelected={selectedElementId === 'main-text'}
+             onSelect={() => onSelectId && onSelectId('main-text')}
+             onUpdate={(el) => onUpdateText && onUpdateText(el.content)}
+          />
+        </div>
         {brandData.tagline && (
-          <p className="mt-4 text-xl font-medium opacity-90" style={{ color: (brandData.customBg || brandData.imageUrl) ? '#FFFFFF' : accent, fontFamily: bodyFont }}>
-             {brandData.tagline}
-          </p>
+          <div className="mt-4 text-xl font-medium opacity-90" style={{ width: '100%', color: (brandData.customBg || brandData.imageUrl) ? '#FFFFFF' : accent, fontFamily: bodyFont }}>
+             <RichTextEditor 
+               element={{ id: 'sub-text', content: brandData.tagline, fontSize: 20, fontFamily: bodyFont }}
+               brandData={brandData}
+               isSelected={selectedElementId === 'sub-text'}
+               onSelect={() => onSelectId && onSelectId('sub-text')}
+               onUpdate={(el) => onUpdateSubHeadline && onUpdateSubHeadline(el.content)}
+             />
+          </div>
         )}
         <div className="w-16 h-1.5 bg-accent mt-10 rounded-full" style={{ backgroundColor: accent }}></div>
       </div>
 
-      {/* Footer Branding Removed */}
+      <div className="absolute bottom-10 inset-x-0 flex justify-center z-10 w-full opacity-80">
+         <span className="text-[10px] font-black uppercase tracking-[0.4em]" style={{ color: customTextColor || ((brandData.customBg || brandData.imageUrl) ? '#FFFFFF' : primary), fontFamily: bodyFont }}>
+            {brandData.brandName || 'Kreavia Vision'}
+         </span>
+      </div>
     </div>
   );
 
@@ -90,29 +126,39 @@ const TemplateRenderer = ({ type, brandData: rawBrand, text, layout = 'centered'
     <div 
       id="template-canvas"
       className="w-full h-full flex flex-col relative overflow-hidden group"
-      style={{ backgroundColor: overrideBg || primary }}
+      style={{ background: overrideBg || primary }}
     >
       {/* Background flare / Custom BG */}
       <div className="absolute inset-0 bg-gradient-to-tr from-accent/30 to-transparent"></div>
       
       {(brandData.customBg || brandData.imageUrl) && (
-        <img src={brandData.customBg || brandData.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-50 mix-blend-overlay" />
+        <img src={brandData.customBg || brandData.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover mix-blend-overlay" style={{ opacity: bgOpacity }} />
       )}
 
       {renderShapes()}
       
       <div className="flex-1 flex flex-col items-center justify-center text-center p-10 z-10">
-        <span className="text-[11px] font-black uppercase tracking-[0.4em] text-accent mb-6">Premium Series</span>
-        <h2 
+        <span className="text-[11px] font-black uppercase tracking-[0.4em] mb-6" style={{ color: accent }}>Premium Series</span>
+        <div 
           className="text-4xl md:text-7xl font-black uppercase tracking-tighter leading-none drop-shadow-2xl"
-          style={{ fontFamily: headlineFont, color: customTextColor || secondary }}
+          style={{ width: '100%', fontFamily: headlineFont, color: customTextColor || secondary }}
         >
-          {text || "THE ART OF CREATION"}
-        </h2>
+          <RichTextEditor 
+             element={{ id: 'main-text', content: text || "THE ART OF CREATION", fontSize: 72, fontFamily: headlineFont, align: 'center' }}
+             brandData={brandData}
+             isSelected={selectedElementId === 'main-text'}
+             onSelect={() => onSelectId && onSelectId('main-text')}
+             onUpdate={(el) => onUpdateText && onUpdateText(el.content)}
+          />
+        </div>
         <div className="w-32 h-1.5 bg-accent mt-8 shadow-glow" style={{ backgroundColor: accent }}></div>
       </div>
 
-      {/* Footer Branding Removed */}
+      <div className="absolute bottom-10 inset-x-0 flex justify-center z-10 w-full opacity-80">
+         <span className="text-[10px] font-black uppercase tracking-[0.4em]" style={{ color: customTextColor || ((brandData.customBg || brandData.imageUrl) ? '#FFFFFF' : primary), fontFamily: bodyFont }}>
+            {brandData.brandName || 'Kreavia Vision'}
+         </span>
+      </div>
     </div>
   );
 
@@ -120,8 +166,15 @@ const TemplateRenderer = ({ type, brandData: rawBrand, text, layout = 'centered'
     <div 
       id="template-canvas"
       className="w-full h-full flex flex-col items-center justify-center p-12 relative overflow-hidden"
-      style={{ backgroundColor: overrideBg || bg }}
+      style={{ background: overrideBg || bg }}
     >
+      {(brandData.customBg || brandData.imageUrl) && (
+        (brandData.customBg || brandData.imageUrl).includes('transparenttextures.com') ? (
+          <div className="absolute inset-0 w-full h-full mix-blend-multiply" style={{ backgroundImage: `url(${brandData.customBg || brandData.imageUrl})`, backgroundRepeat: 'repeat', opacity: bgOpacity }} />
+        ) : (
+          <img src={brandData.customBg || brandData.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover mix-blend-multiply" style={{ opacity: bgOpacity }} />
+        )
+      )}
       {renderShapes()}
 
       <div 
@@ -136,9 +189,15 @@ const TemplateRenderer = ({ type, brandData: rawBrand, text, layout = 'centered'
             )}
          </div>
       </div>
-      <h3 className="text-2xl font-black tracking-widest text-center uppercase z-10" style={{ fontFamily: headlineFont, color: customTextColor || primary }}>
-        {text || "Resources"}
-      </h3>
+      <div className="text-2xl font-black tracking-widest text-center uppercase z-10 w-full" style={{ fontFamily: headlineFont, color: customTextColor || primary }}>
+        <RichTextEditor 
+           element={{ id: 'main-text', content: text || "Resources", fontSize: 24, fontFamily: headlineFont, align: 'center' }}
+           brandData={brandData}
+           isSelected={selectedElementId === 'main-text'}
+           onSelect={() => onSelectId && onSelectId('main-text')}
+           onUpdate={(el) => onUpdateText && onUpdateText(el.content)}
+        />
+      </div>
       <div className="absolute bottom-0 inset-x-0 h-2 bg-accent" style={{ backgroundColor: accent }}></div>
     </div>
   );
@@ -147,8 +206,11 @@ const TemplateRenderer = ({ type, brandData: rawBrand, text, layout = 'centered'
     <div 
       id="template-canvas"
       className="w-full h-full flex flex-col p-12 relative overflow-hidden"
-      style={{ backgroundColor: overrideBg || secondary }}
+      style={{ background: overrideBg || secondary }}
     >
+      {(brandData.customBg || brandData.imageUrl) && (
+        <img src={brandData.customBg || brandData.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover mix-blend-overlay" style={{ opacity: bgOpacity }} />
+      )}
       {renderShapes()}
 
       <div className="flex justify-between items-center mb-12 z-10">
@@ -156,18 +218,34 @@ const TemplateRenderer = ({ type, brandData: rawBrand, text, layout = 'centered'
          <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-[11px] text-primary font-bold shadow-md" style={{ backgroundColor: accent, color: bg }}>→</div>
       </div>
       <div className="flex-1 flex flex-col z-10">
-        <h2 
-          className="text-4xl md:text-5xl font-black leading-[1.05] mb-8 tracking-tight"
+        <div 
+          className="text-4xl md:text-5xl font-black leading-[1.05] mb-8 tracking-tight w-full"
           style={{ fontFamily: headlineFont, color: customTextColor || primary }}
         >
-          {text || "3 Ways to Elevate Your Visual Output →"}
-        </h2>
-        <p className="text-base opacity-70 leading-relaxed max-w-[320px] font-medium" style={{ fontFamily: bodyFont, color: customTextColor || primary }}>
-            Consistency isn't about being perfect, it's about showing up with a recognizable DNA.
-        </p>
+          <RichTextEditor 
+             element={{ id: 'main-text', content: text || "3 Ways to Elevate Your Visual Output →", fontSize: 48, fontFamily: headlineFont, align: 'left' }}
+             brandData={brandData}
+             isSelected={selectedElementId === 'main-text'}
+             onSelect={() => onSelectId && onSelectId('main-text')}
+             onUpdate={(el) => onUpdateText && onUpdateText(el.content)}
+          />
+        </div>
+        <div className="text-base opacity-70 leading-relaxed font-medium" style={{ width: '320px', fontFamily: bodyFont, color: customTextColor || primary }}>
+          <RichTextEditor 
+             element={{ id: 'sub-text', content: subHeadline || "Consistency isn't about being perfect, it's about showing up with a recognizable DNA.", fontSize: 16, fontFamily: bodyFont, align: 'left' }}
+             brandData={brandData}
+             isSelected={selectedElementId === 'sub-text'}
+             onSelect={() => onSelectId && onSelectId('sub-text')}
+             onUpdate={(el) => onUpdateSubHeadline && onUpdateSubHeadline(el.content)}
+          />
+        </div>
       </div>
 
-      {/* Footer Branding Removed */}
+      <div className="absolute bottom-10 inset-x-0 flex justify-center z-10 w-full opacity-80">
+         <span className="text-[10px] font-black uppercase tracking-[0.4em]" style={{ color: customTextColor || ((brandData.customBg || brandData.imageUrl) ? '#FFFFFF' : primary), fontFamily: bodyFont }}>
+            {brandData.brandName || 'Kreavia Vision'}
+         </span>
+      </div>
     </div>
   );
 
@@ -175,21 +253,40 @@ const TemplateRenderer = ({ type, brandData: rawBrand, text, layout = 'centered'
     <div 
       id="template-canvas"
       className="w-full h-full flex flex-col p-10 relative overflow-hidden"
-      style={{ backgroundColor: overrideBg || bg }}
+      style={{ background: overrideBg || bg }}
     >
+      {(brandData.customBg || brandData.imageUrl) && (
+        (brandData.customBg || brandData.imageUrl).includes('transparenttextures.com') ? (
+          <div className="absolute inset-0 w-full h-full mix-blend-multiply z-0" style={{ backgroundImage: `url(${brandData.customBg || brandData.imageUrl})`, backgroundRepeat: 'repeat', opacity: bgOpacity }} />
+        ) : (
+          <img src={brandData.customBg || brandData.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover mix-blend-multiply z-0" style={{ opacity: bgOpacity }} />
+        )
+      )}
       <div className="absolute top-0 right-0 w-48 h-48 bg-accent/10 rounded-full -mr-24 -mt-24 blur-3xl" style={{ backgroundColor: `${accent}33` }}></div>
       
       {renderShapes()}
 
-      <div className="z-10 bg-accent text-primary self-start px-5 py-2 rounded-full text-[11px] font-black uppercase tracking-[0.2em] mb-8 shadow-sm" style={{ backgroundColor: accent, color: bg }}>
-        Pro Wisdom
+      <div className="z-10 bg-accent text-primary self-start px-2 py-1 rounded-full text-[11px] font-black uppercase tracking-[0.2em] mb-8 shadow-sm" style={{ backgroundColor: accent, color: bg, minWidth: '100px' }}>
+        <RichTextEditor 
+           element={{ id: 'badge-text', content: badgeText || "Pro Wisdom", fontSize: 11, fontFamily: bodyFont, align: 'center' }}
+           brandData={brandData}
+           isSelected={selectedElementId === 'badge-text'}
+           onSelect={() => onSelectId && onSelectId('badge-text')}
+           onUpdate={(el) => onUpdateBadgeText && onUpdateBadgeText(el.content)}
+        />
       </div>
-      <h2 
-        className="text-3xl md:text-4xl font-black leading-tight mb-10 z-10"
+      <div 
+        className="text-3xl md:text-4xl font-black leading-tight mb-10 z-10 w-full"
         style={{ fontFamily: headlineFont, color: customTextColor || primary }}
       >
-        {text || "How to maintain brand consistency across all platforms."}
-      </h2>
+        <RichTextEditor 
+           element={{ id: 'main-text', content: text || "How to maintain brand consistency across all platforms.", fontSize: 36, fontFamily: headlineFont, align: 'left' }}
+           brandData={brandData}
+           isSelected={selectedElementId === 'main-text'}
+           onSelect={() => onSelectId && onSelectId('main-text')}
+           onUpdate={(el) => onUpdateText && onUpdateText(el.content)}
+        />
+      </div>
       <div className="flex flex-col gap-6 z-10">
         {[1, 2, 3].map(i => (
           <div key={i} className="flex items-center gap-5">
@@ -200,7 +297,11 @@ const TemplateRenderer = ({ type, brandData: rawBrand, text, layout = 'centered'
           </div>
         ))}
       </div>
-      {/* Footer Branding Removed */}
+      <div className="absolute bottom-10 inset-x-0 flex justify-center z-10 w-full opacity-80">
+         <span className="text-[10px] font-black uppercase tracking-[0.4em]" style={{ color: customTextColor || ((brandData.customBg || brandData.imageUrl) ? '#FFFFFF' : primary), fontFamily: bodyFont }}>
+            {brandData.brandName || 'Kreavia Vision'}
+         </span>
+      </div>
     </div>
   );
 

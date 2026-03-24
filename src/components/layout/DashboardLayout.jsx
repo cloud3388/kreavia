@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Palette, Image as ImageIcon, Sparkles, LineChart, Settings, Search, Bell, Zap, LogOut, User as UserIcon } from 'lucide-react';
+import { LayoutDashboard, Palette, Image as ImageIcon, Sparkles, LineChart, Settings, Search, Bell, Zap, LogOut, User as UserIcon, ChevronDown, Check as CheckIcon, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import UpgradeModal from '../UpgradeModal';
 import { useAuth } from '../../context/AuthContext';
 import logo from '../../assets/logo.png';
+import { getPlanStatus, getRemainingGenerations } from '../../utils/planPermissions';
+import { NudgeBanner } from '../common/UpgradeNudges';
+import { getBrands, getActiveBrand } from '../../utils/storage';
 
 const DashboardLayout = () => {
   const location = useLocation();
@@ -12,6 +15,59 @@ const DashboardLayout = () => {
   const { user, signOut } = useAuth();
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const plan = getPlanStatus();
+  const isPro = localStorage.getItem('kreavia_pro_user') === 'true';
+  const genCount = getRemainingGenerations();
+  
+  // Brand Switcher State
+  const [userBrands, setUserBrands] = useState([]);
+  const [activeBrandId, setActiveBrandId] = useState('');
+  const [switcherOpen, setSwitcherOpen] = useState(false);
+  const [toastMsg, setToastMsg] = useState('');
+
+  const loadBrands = async () => {
+    const brands = await getBrands();
+    setUserBrands(brands);
+    const active = await getActiveBrand();
+    setActiveBrandId(active?.id || '');
+  };
+
+  React.useEffect(() => {
+    loadBrands();
+    window.addEventListener('kreavia_brands_updated', loadBrands);
+
+    // Initial account creation date tracking for Nudge 4
+    if (!localStorage.getItem('kreavia_account_created_at')) {
+      localStorage.setItem('kreavia_account_created_at', new Date().toISOString());
+    }
+
+    return () => window.removeEventListener('kreavia_brands_updated', loadBrands);
+  }, []);
+
+  const getAccountAgeInDays = () => {
+    const createdAt = localStorage.getItem('kreavia_account_created_at');
+    if (!createdAt) return 0;
+    const diff = new Date() - new Date(createdAt);
+    return Math.floor(diff / (1000 * 60 * 60 * 24));
+  };
+
+  const accountAge = getAccountAgeInDays();
+
+  const handleSwitchBrand = (brand) => {
+    localStorage.setItem('kreavia_active_brand_id', brand.id);
+    sessionStorage.setItem('currentBrandKit', JSON.stringify(brand));
+    setActiveBrandId(brand.id);
+    setSwitcherOpen(false);
+    
+    // Notify all components that active brand changed
+    window.dispatchEvent(new Event('kreavia_brands_updated'));
+    
+    const bName = brand.dna?.brand_name || brand.brandName || 'Brand';
+    setToastMsg(`Switched to ${bName}`);
+    setTimeout(() => setToastMsg(''), 2000);
+  };
+
+  let activeBrandObj = userBrands.find(b => b.id === activeBrandId) || userBrands[0] || null;
   
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard size={20} className="md:w-5 md:h-5 w-6 h-6" /> },
@@ -33,6 +89,21 @@ const DashboardLayout = () => {
       {/* Upgrade Modal */}
       <UpgradeModal isOpen={upgradeOpen} onClose={() => setUpgradeOpen(false)} />
 
+      {/* Global Toast */}
+      <AnimatePresence>
+        {toastMsg && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, x: '-50%' }}
+            animate={{ opacity: 1, y: 0, x: '-50%' }}
+            exit={{ opacity: 0, y: 50, x: '-50%' }}
+            className="fixed bottom-24 left-1/2 md:bottom-10 z-[200] bg-primary text-white px-6 py-3 rounded-full font-ui text-sm font-bold shadow-2xl flex items-center gap-2"
+          >
+            <CheckIcon size={16} className="text-green-400" />
+            {toastMsg}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Sidebar - Desktop 240px */}
       <aside className="hidden md:flex w-[240px] border-r border-light flex-col bg-surface z-20 shrink-0 shadow-lg">
         <div className="h-[72px] flex items-center px-6 border-b border-light shrink-0 bg-surface">
@@ -52,7 +123,84 @@ const DashboardLayout = () => {
           </div>
         </div>
         
-        <nav className="flex-1 py-8 px-4 flex flex-col gap-2 overflow-y-auto">
+        <nav className="flex-1 py-8 px-4 flex flex-col gap-2 overflow-y-auto hide-scrollbar">
+          
+          {/* Brand Switcher */}
+          {activeBrandObj && (
+            <div className="relative mb-6">
+              <div className="text-muted/60 text-[10px] uppercase font-bold tracking-widest px-4 mb-2 font-ui">Active Brand</div>
+              <button 
+                onClick={() => setSwitcherOpen(!switcherOpen)}
+                className="w-full flex items-center justify-between p-2 rounded-xl border border-transparent hover:bg-surface hover:border-light hover:shadow-sm transition-all group"
+              >
+                <div className="flex items-center gap-3 overflow-hidden">
+                  <div className="w-8 h-8 rounded-full bg-white border border-light/50 flex flex-center p-1 shrink-0">
+                    <img src={activeBrandObj.logos?.[0]?.url || activeBrandObj.logo || logo} className="w-full h-full object-contain mix-blend-multiply" alt="Brand Logo" />
+                  </div>
+                  <span className="font-ui font-bold text-sm text-primary truncate">
+                    {activeBrandObj.dna?.brand_name || activeBrandObj.brandName || 'My Brand'}
+                  </span>
+                </div>
+                <ChevronDown size={14} className={`text-muted transition-transform duration-300 ${switcherOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              <AnimatePresence>
+                {switcherOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setSwitcherOpen(false)} />
+                    <motion.div 
+                      initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute top-[60px] left-0 w-[240px] bg-white border border-light shadow-xl rounded-xl z-50 py-2 max-h-[300px] overflow-y-auto custom-scrollbar"
+                    >
+                      <div className="px-3 pb-2 mb-2 border-b border-light/50 text-[10px] font-bold uppercase tracking-widest text-muted">Select Brand</div>
+                      <div className="flex flex-col gap-1 px-2">
+                        {userBrands.map(b => {
+                          const isActive = b.id === activeBrandId;
+                          return (
+                            <button 
+                              key={b.id}
+                              onClick={() => handleSwitchBrand(b)}
+                              className={`flex items-center gap-3 p-2 rounded-lg text-left transition-colors ${isActive ? 'bg-accent/10' : 'hover:bg-surface'}`}
+                            >
+                              <div className="w-8 h-8 rounded-full bg-white border border-light/50 p-1 shrink-0 overflow-hidden">
+                                <img src={b.logos?.[0]?.url || b.logo || logo} className="w-full h-full object-contain mix-blend-multiply" alt="Logo" />
+                              </div>
+                              <div className="flex flex-col overflow-hidden">
+                                <span className={`text-xs truncate ${isActive ? 'font-bold text-accent' : 'font-medium text-primary'}`}>
+                                  {b.dna?.brand_name || b.brandName || 'Brand'}
+                                </span>
+                                <span className="text-[10px] text-muted truncate">{b.dna?.niche || b.niche || 'Other'}</span>
+                              </div>
+                              {isActive && <CheckIcon size={12} className="ml-auto text-accent shrink-0" />}
+                            </button>
+                          )
+                        })}
+                      </div>
+                      <div className="px-2 mt-2 pt-2 border-t border-light/50">
+                        <button 
+                          onClick={() => { 
+                            setSwitcherOpen(false); 
+                            if (userBrands.length >= plan.maxBrands) {
+                              setUpgradeOpen(true);
+                            } else {
+                              navigate('/onboarding'); 
+                            }
+                          }}
+                          className="w-full flex items-center justify-center gap-2 p-2 rounded-lg hover:bg-surface text-muted hover:text-primary transition-colors text-xs font-bold"
+                        >
+                          <Plus size={14} /> New Brand
+                        </button>
+                      </div>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
+
           <div className="text-muted/60 text-[10px] uppercase font-bold tracking-widest px-4 mb-2 font-ui">Studio</div>
           {navItems.map((item) => {
             const isActive = location.pathname.includes(item.path) && (item.path !== '/dashboard' || location.pathname === '/dashboard');
@@ -80,17 +228,42 @@ const DashboardLayout = () => {
         
         {/* Sidebar Footer */}
         <div className="p-4 border-t border-light bg-highlight/30">
-           <div className="glass-card p-4 rounded-xl border-accent/20 bg-accent/5 flex flex-col gap-3 shadow-sm border">
-              <div className="flex items-center gap-2 text-accent font-ui text-xs font-bold uppercase tracking-widest"><Sparkles size={14} /> Free Plan</div>
-              <div className="font-ui text-xs text-muted">You have 3 AI generations left this month.</div>
-              <button onClick={() => setUpgradeOpen(true)} className="btn btn-primary h-8 text-xs font-bold w-full">Upgrade to Pro</button>
-           </div>
+           {isPro ? (
+             <div className="glass-card p-4 rounded-xl border-accent/30 bg-accent/10 flex flex-col gap-2 shadow-sm border">
+               <div className="flex items-center gap-2 text-accent font-ui text-xs font-bold uppercase tracking-widest"><Sparkles size={14} /> Pro Studio</div>
+               <div className="font-ui text-xs text-muted">Unlimited AI generations & full template access.</div>
+               <div className="flex items-center gap-1.5 mt-1">
+                 <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                 <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Active</span>
+               </div>
+             </div>
+           ) : (
+             <div className="glass-card p-4 rounded-xl border-accent/20 bg-accent/5 flex flex-col gap-3 shadow-sm border">
+               <div className="flex items-center gap-2 text-accent font-ui text-xs font-bold uppercase tracking-widest"><Sparkles size={14} /> Free Plan</div>
+               <div className="font-ui text-xs text-muted">
+                 {genCount === 0 ? "No generations left this month." : `You have ${genCount} AI generation${genCount !== 1 ? 's' : ''} left this month.`}
+               </div>
+               <div className="w-full h-1.5 bg-light rounded-full overflow-hidden">
+                 <div className="h-full bg-accent rounded-full transition-all" style={{ width: `${(genCount / 3) * 100}%` }}></div>
+               </div>
+               <button onClick={() => setUpgradeOpen(true)} className="btn btn-primary h-8 text-xs font-bold w-full">Upgrade to Pro</button>
+             </div>
+           )}
         </div>
       </aside>
 
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col min-w-[320px] bg-main relative z-10 w-full overflow-hidden">
         <div className="absolute inset-0 bg-white/50 pointer-events-none mix-blend-overlay z-0"></div>
+
+        {accountAge >= 25 && !isPro && (
+          <NudgeBanner 
+            id="urgency_pricing"
+            message="Early access pricing ends soon."
+            benefit="Lock in Pro at ₹374/month before price increases."
+            onUpgrade={() => setUpgradeOpen(true)}
+          />
+        )}
 
         {/* Top Bar - 72px */}
         <header className="h-[72px] border-b border-light flex items-center justify-between px-4 md:px-8 bg-surface/80 backdrop-blur-md shrink-0 z-40 sticky top-0 shadow-sm relative">
@@ -164,7 +337,7 @@ const DashboardLayout = () => {
         <div className="flex-1 overflow-x-hidden overflow-y-auto relative z-10 p-4 md:p-8 lg:p-10 pb-[100px] md:pb-8 w-full h-full custom-scrollbar">
            <AnimatePresence mode="wait">
              <motion.div
-               key={location.pathname}
+               key={location.pathname + activeBrandId}
                initial={{ opacity: 0, y: 10 }}
                animate={{ opacity: 1, y: 0 }}
                exit={{ opacity: 0, y: -10 }}

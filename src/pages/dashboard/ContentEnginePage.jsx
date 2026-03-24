@@ -1,281 +1,511 @@
 import React, { useState, useEffect } from 'react';
-import { Lightbulb, MessageSquare, Hash, Copy, CheckCircle, RefreshCcw, Sparkles, Quote, Send, Info } from 'lucide-react';
-import { generateContentIdeas, generateCaptions, generateHashtags } from '../../services/aiService';
+import { 
+  Sparkles, 
+  Wand2, 
+  Copy, 
+  Check, 
+  Hash, 
+  MessageSquare, 
+  Zap,
+  Quote,
+  Loader2,
+  RefreshCw,
+  Search,
+  BookOpen
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { isFeatureLocked, getPlanStatus } from '../../utils/planPermissions';
+import UpgradeModal from '../../components/UpgradeModal';
+import { LockedOverlay, BlurredCard } from '../../components/common/LockedFeatures';
+import { NudgeInlineCard } from '../../components/common/UpgradeNudges';
+import { getActiveBrand } from '../../utils/storage';
+
+// Internal Services
+import { 
+  generateContentIdeas, 
+  generateCaptions, 
+  generateHashtags, 
+  generateHashtagStrategy,
+  refineWithBrandVoice 
+} from '../../services/brandAiService';
 
 const ContentEnginePage = () => {
   const [activeTab, setActiveTab] = useState('ideas');
   const [loading, setLoading] = useState(false);
   const [brandData, setBrandData] = useState(null);
-  const [selectedTone, setSelectedTone] = useState('luxury');
-  const [postTopic, setPostTopic] = useState('');
-  const [data, setData] = useState({ ideas: [], captions: [], hashtags: [] });
-  const [copiedIndex, setCopiedIndex] = useState(null);
+  
+  // Tab-specific states
+  const [ideas, setIdeas] = useState([]);
+  const [topic, setTopic] = useState('');
+  const [captions, setCaptions] = useState([]);
+  const [hashtags, setHashtags] = useState([]);
+  const [hashtagStrategy, setHashtagStrategy] = useState(null);
+  const [voiceInput, setVoiceInput] = useState('');
+  const [refinedVoiceText, setRefinedVoiceText] = useState('');
+  const [copiedId, setCopiedId] = useState(null);
+  const [existingHooksHistory, setExistingHooksHistory] = useState([]);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
+  // Auto-generate hashtag strategy when tab opens
   useEffect(() => {
-    const savedKit = sessionStorage.getItem('currentBrandKit');
-    const parsed = savedKit ? JSON.parse(savedKit) : { brandVoice: 'Sophisticated', niche: 'Premium', brandArchetype: 'The Visionary' };
-    setBrandData(parsed);
-    if (parsed.brandVoice?.toLowerCase().includes('bold')) setSelectedTone('bold');
-    
-    // Initial fetch handled inside this useEffect to ensure brandData is present
-    const initialFetch = async () => {
-       setLoading(true);
-       try {
-         const context = { archetype: parsed.brandArchetype, voice: parsed.brandVoice, topic: '' };
-         const ideas = await generateContentIdeas(parsed.niche || 'lifestyle', context);
-         setData(prev => ({ ...prev, ideas }));
-       } finally {
-         setLoading(false);
-       }
-    };
-    initialFetch();
-  }, []);
-
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const context = {
-        archetype: brandData?.brandArchetype,
-        voice: brandData?.brandVoice,
-        topic: postTopic
-      };
-
-      if (activeTab === 'ideas') {
-        const ideas = await generateContentIdeas(brandData?.niche || 'lifestyle', context);
-        setData(prev => ({ ...prev, ideas }));
-      } else if (activeTab === 'captions') {
-        const captions = await generateCaptions(selectedTone, context);
-        // Clean up formatting: only prepend topic if it's not already there
-        const formattedCaptions = captions.map(c => {
-           if (!postTopic) return c;
-           const cleanPostTopic = postTopic.trim();
-           if (c.toLowerCase().startsWith(cleanPostTopic.toLowerCase())) return c;
-           return `${cleanPostTopic}: ${c}`;
-        });
-        setData(prev => ({ ...prev, captions: formattedCaptions }));
-      } else if (activeTab === 'hashtags') {
-        const hashtags = await generateHashtags(brandData?.niche || 'lifestyle', context);
-        setData(prev => ({ ...prev, hashtags }));
-      }
-    } finally {
-      setLoading(false);
+    if (activeTab === 'hashtags' && !hashtagStrategy && brandData) {
+      handleGenerateStrategyHashtags();
     }
+  }, [activeTab, hashtagStrategy, brandData]);
+
+    const initBrand = async () => {
+      let rawKit = await getActiveBrand();
+      
+      if (!rawKit) {
+        const savedSession = sessionStorage.getItem('currentBrandKit');
+        if (savedSession) rawKit = JSON.parse(savedSession);
+      }
+      
+      if (rawKit) {
+        sessionStorage.setItem('currentBrandKit', JSON.stringify(rawKit));
+        setBrandData(rawKit);
+      } else {
+        setBrandData({
+           brandName: 'Kreavia Demo',
+           brandVoice: 'Sophisticated, Minimal, Confident',
+           brandArchetype: 'The Visionary',
+           niche: 'Lifestyle',
+           targetAudience: 'Entrepreneurs',
+        });
+      }
+    };
+    initBrand();
+
+  const handleCopy = (text, id) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const copyText = (text, index) => {
-    // Add Instagram-style formatting (line breaks)
-    const formattedText = text.replace(/([.?!])\s+/g, '$1\n\n');
-    navigator.clipboard.writeText(formattedText);
-    setCopiedIndex(index);
-    setTimeout(() => setCopiedIndex(null), 2000);
+  const handleGenerateIdeas = async () => {
+    if (!brandData) return;
+    setLoading(true);
+    const result = await generateContentIdeas(brandData, existingHooksHistory);
+    if (result && result.length > 0) {
+      setIdeas(result);
+      const newTitles = result.map(r => r.title);
+      setExistingHooksHistory(prev => [...prev, ...newTitles]);
+    }
+    setLoading(false);
+  };
+
+  const handleGenerateCaptions = async () => {
+    if (!topic || !brandData) return;
+    setLoading(true);
+    const result = await generateCaptions(brandData, topic);
+    setCaptions(result);
+    setLoading(false);
+  };
+
+  const handleGenerateHashtags = async () => {
+    if (!topic) return;
+    setLoading(true);
+    const result = await generateHashtags(brandData?.industry || 'lifestyle', { topic });
+    setHashtags(result);
+    setLoading(false);
+  };
+
+  const handleGenerateStrategyHashtags = async () => {
+    if (!brandData) return;
+    setLoading(true);
+    const result = await generateHashtagStrategy(brandData);
+    if (result) setHashtagStrategy(result);
+    setLoading(false);
+  };
+
+  const handleCopyAllStrategyTags = () => {
+    if (!hashtagStrategy) return;
+    const allTags = [
+      ...(hashtagStrategy.niche || []),
+      ...(hashtagStrategy.growth || []),
+      ...(hashtagStrategy.brand || [])
+    ].map(t => `#${t.tag.replace('#', '')}`).join(' ');
+    
+    handleCopy(allTags, 'all-strategy-tags');
+  };
+
+  const handleRefineVoice = async () => {
+    if (!voiceInput || !brandData) return;
+    setLoading(true);
+    const result = await refineWithBrandVoice(brandData, voiceInput);
+    setRefinedVoiceText(result);
+    setLoading(false);
   };
 
   const tabs = [
-    { id: 'ideas', label: 'Viral Post Ideas', icon: <Lightbulb size={18} /> },
+    { id: 'ideas', label: 'Magic Hooks', icon: <Wand2 size={18} /> },
     { id: 'captions', label: 'AI Captions', icon: <MessageSquare size={18} /> },
-    { id: 'hashtags', label: 'Hashtag Strategy', icon: <Hash size={18} /> },
+    { id: 'hashtags', label: 'Hashtags', icon: <Hash size={18} /> },
+    { id: 'voice', label: 'Brand Voice', icon: <BookOpen size={18} /> },
   ];
 
-  const tones = [
-    { id: 'luxury', label: 'Luxury' },
-    { id: 'bold', label: 'Bold' },
-    { id: 'minimal', label: 'Minimalist' },
-    { id: 'witty', label: 'Witty' },
-    { id: 'educational', label: 'Educational' },
-  ];
+  const plan = getPlanStatus();
 
   return (
-    <div className="animate-fade-in flex flex-col gap-8 max-w-4xl pb-20">
-      <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
-        <div className="flex bg-surface p-1.5 rounded-2xl border border-light w-max shadow-sm">
-           {tabs.map(tab => (
-             <button
-               key={tab.id}
-               onClick={() => setActiveTab(tab.id)}
-               className={`flex items-center gap-3 px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${activeTab === tab.id ? 'bg-primary text-secondary shadow-lg scale-105' : 'text-muted hover:text-primary'}`}
-             >
-               {tab.icon} {tab.label}
-             </button>
-           ))}
-        </div>
+    <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '40px 20px' }}>
+      <header style={{ marginBottom: '40px' }}>
+        <h1 style={{ fontSize: '32px', fontWeight: '800', marginBottom: '8px' }}>Content Engine</h1>
+        <p style={{ color: '#666' }}>Generate high-performing copy aligned with your brand DNA.</p>
+      </header>
 
-        {brandData && (
-          <div className="flex items-center gap-3 px-5 py-2.5 bg-accent/10 border border-accent/20 rounded-full shadow-sm">
-            <Sparkles size={16} className="text-accent" />
-            <span className="text-[10px] uppercase tracking-widest font-black text-accent">{brandData.brandArchetype} Voice</span>
-          </div>
-        )}
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '32px', backgroundColor: '#f0f0f0', padding: '6px', borderRadius: '16px', width: 'fit-content' }}>
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => {
+              if ((tab.id === 'hashtags' && isFeatureLocked('hashtagStrategy')) || 
+                  (tab.id === 'voice' && isFeatureLocked('brandVoice'))) {
+                setShowUpgradeModal(true);
+                return;
+              }
+              setActiveTab(tab.id);
+            }}
+            style={{
+              padding: '10px 20px',
+              borderRadius: '12px',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontSize: '13px',
+              fontWeight: '700',
+              transition: 'all 0.2s',
+              backgroundColor: activeTab === tab.id ? 'white' : 'transparent',
+              color: activeTab === tab.id ? '#1a1a1a' : '#666',
+              boxShadow: activeTab === tab.id ? '0 4px 12px rgba(0,0,0,0.05)' : 'none',
+              position: 'relative'
+            }}
+          >
+            {tab.icon}
+            {tab.label}
+            {((tab.id === 'hashtags' && isFeatureLocked('hashtagStrategy')) || 
+              (tab.id === 'voice' && isFeatureLocked('brandVoice'))) && (
+              <Crown size={10} style={{ position: 'absolute', top: '4px', right: '4px', color: '#C6A96B' }} />
+            )}
+          </button>
+        ))}
       </div>
 
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-4">
-         <div className="flex-1">
-           <h3 className="text-3xl md:text-4xl font-headline text-primary font-bold">
-             {activeTab === 'ideas' && 'Content Hooks'}
-             {activeTab === 'captions' && 'Smart Captions'}
-             {activeTab === 'hashtags' && 'Reach Strategy'}
-           </h3>
-           <p className="text-muted mt-2 max-w-lg font-medium">
-             {activeTab === 'ideas' && `Viral-ready angles tailored for your ${brandData?.brandArchetype || 'brand'}.`}
-             {activeTab === 'captions' && 'Social-ready copy that converts, formatted for high engagement platforms.'}
-             {activeTab === 'hashtags' && 'Optimized sets based on your unique niche engagement data.'}
-           </p>
-         </div>
-        
-        {activeTab === 'captions' && (
-           <div className="flex flex-col gap-3 w-full md:w-auto">
-              <label className="text-[10px] uppercase tracking-widest font-bold text-muted ml-1">Select Tone</label>
-              <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2 md:pb-0">
-                 {tones.map(tone => (
-                    <button
-                       key={tone.id}
-                       onClick={() => setSelectedTone(tone.id)}
-                       className={`px-4 py-1.5 rounded-full border text-xs whitespace-nowrap transition-all ${
-                          selectedTone === tone.id ? 'bg-accent/10 border-accent/50 text-accent' : 'bg-transparent border-light text-muted hover:border-white/20'
-                       }`}
-                    >
-                       {tone.label}
-                    </button>
-                 ))}
+      <div style={{ minHeight: '400px' }}>
+        {/* IDEAS TAB */}
+        {activeTab === 'ideas' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            {ideas.length === 0 ? (
+              <div style={{ padding: '32px', border: '1px solid rgba(0,0,0,0.05)', borderRadius: '24px', backgroundColor: '#fafafa', textAlign: 'center' }}>
+                <Zap size={32} style={{ color: '#C6A96B', marginBottom: '16px' }} />
+                <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '8px' }}>Generate Viral Content Hooks</h3>
+                <p style={{ color: '#666', fontSize: '14px', marginBottom: '24px' }}>Get 10 unique hooks based on your brand strategy and niche.</p>
+                <button 
+                  onClick={handleGenerateIdeas}
+                  disabled={loading}
+                  style={{ backgroundColor: '#1a1a1a', color: 'white', border: 'none', padding: '14px 28px', borderRadius: '14px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', margin: '0 auto' }}
+                >
+                  {loading ? <Loader2 className="animate-spin" size={18} /> : <Sparkles size={18} />}
+                  Generate Initial Ideas
+                </button>
               </div>
-           </div>
+            ) : (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '8px' }}>
+                <div>
+                   <h3 style={{ fontSize: '20px', fontWeight: '800' }}>Viral Content Hooks</h3>
+                   <p style={{ color: '#666', fontSize: '14px' }}>Here are 10 fresh hooks tailored for you.</p>
+                </div>
+                <button 
+                  onClick={handleGenerateIdeas}
+                  disabled={loading}
+                  style={{ backgroundColor: 'white', color: '#1a1a1a', border: '1px solid rgba(0,0,0,0.1)', padding: '10px 20px', borderRadius: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}
+                >
+                  {loading ? <Loader2 className="animate-spin" size={16} /> : <RefreshCw size={16} />}
+                  Regenerate
+                </button>
+              </div>
+            )}
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              {ideas.map((idea, i) => (
+                <React.Fragment key={i}>
+                  <BlurredCard 
+                    index={i} 
+                    limit={plan.visibleHooks}
+                    onUpgrade={() => setShowUpgradeModal(true)}
+                  >
+                    <div style={{ 
+                      padding: '24px', 
+                      borderRadius: '20px', 
+                      backgroundColor: 'white', 
+                      border: '1px solid rgba(0,0,0,0.05)', 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      justifyContent: 'space-between',
+                      minHeight: '160px'
+                    }}>
+                      <div style={{ marginBottom: '16px' }}>
+                        <span style={{ fontSize: '10px', fontWeight: '800', textTransform: 'uppercase', color: '#C6A96B', letterSpacing: '0.1em' }}>{idea.contentType}</span>
+                        <p style={{ fontSize: '15px', fontWeight: '700', marginTop: '8px', lineHeight: '1.4' }}>{idea.title}</p>
+                      </div>
+                      <button onClick={() => handleCopy(idea.title, i)} style={{ backgroundColor: 'transparent', border: 'none', color: '#666', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '700' }}>
+                        {copiedId === i ? <Check size={14} color="green" /> : <Copy size={14} />}
+                        {copiedId === i ? 'Copied' : 'Copy'}
+                      </button>
+                    </div>
+                  </BlurredCard>
+                  {i === 2 && plan.visibleHooks !== Infinity && (
+                    <NudgeInlineCard 
+                      message="Get 7 more content hooks plus hashtags and captions with Pro."
+                      onUpgrade={() => setShowUpgradeModal(true)}
+                    />
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* CAPTIONS TAB */}
+        {activeTab === 'captions' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <input 
+                type="text" 
+                value={topic} 
+                onChange={(e) => setTopic(e.target.value)}
+                placeholder="What is this post about?"
+                style={{ flex: 1, padding: '16px 20px', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.1)', fontSize: '14px', outline: 'none' }}
+              />
+              <button 
+                onClick={handleGenerateCaptions}
+                disabled={loading || !topic}
+                style={{ backgroundColor: '#1a1a1a', color: 'white', border: 'none', padding: '0 24px', borderRadius: '16px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
+              >
+                {loading ? <Loader2 className="animate-spin" size={18} /> : 'Generate'}
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {captions.map((cap, i) => (
+                <BlurredCard 
+                  key={i} 
+                  index={i} 
+                  limit={plan.captionVariations.length}
+                  onUpgrade={() => setShowUpgradeModal(true)}
+                >
+                  <div style={{ 
+                    padding: '24px', 
+                    borderRadius: '24px', 
+                    backgroundColor: 'white', 
+                    border: '1px solid rgba(0,0,0,0.05)', 
+                    position: 'relative'
+                  }}>
+                    <div>
+                      <div style={{ display: 'flex', justifyBetween: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                        <span style={{ fontSize: '10px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.1em', backgroundColor: '#f0f0f0', padding: '4px 10px', borderRadius: '6px' }}>{cap.type}</span>
+                        <button onClick={() => handleCopy(cap.caption, `cap-${i}`)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#666' }}>
+                            {copiedId === `cap-${i}` ? <Check size={16} color="green" /> : <Copy size={16} />}
+                        </button>
+                      </div>
+                      <p style={{ fontSize: '15px', color: '#333', lineHeight: '1.6', whiteSpace: 'pre-wrap', fontFamily: brandData?.typography?.body || 'inherit' }}>{cap.caption}</p>
+                    </div>
+                  </div>
+                </BlurredCard>
+              ))}
+              
+              {captions.length > 0 && (
+                <button 
+                  onClick={handleGenerateHashtags}
+                  style={{ width: 'fit-content', margin: '10px auto', backgroundColor: 'transparent', border: '1px solid #C6A96B', color: '#C6A96B', padding: '10px 20px', borderRadius: '12px', fontWeight: '700', cursor: 'pointer', fontSize: '13px' }}
+                >
+                  Generate Hashtags for this post
+                </button>
+              )}
+            </div>
+
+            {hashtags.length > 0 && (
+               <div style={{ padding: '24px', borderRadius: '24px', backgroundColor: '#f9f9f9', border: '1px dashed rgba(0,0,0,0.1)' }}>
+                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                   {hashtags.map((tag, i) => (
+                     <span key={i} style={{ fontSize: '13px', color: '#C6A96B', fontWeight: '600' }}>#{tag.replace('#','')}</span>
+                   ))}
+                 </div>
+                 <button 
+                  onClick={() => handleCopy(hashtags.join(' '), 'tags')} 
+                  style={{ marginTop: '16px', background: 'none', border: 'none', color: '#666', cursor: 'pointer', fontSize: '12px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px' }}
+                 >
+                   {copiedId === 'tags' ? <Check size={14} color="green" /> : <Copy size={14} />}
+                   Copy all hashtags
+                 </button>
+               </div>
+            )}
+          </div>
+        )}
+
+        {/* HASHTAGS STRATEGY TAB */}
+        {activeTab === 'hashtags' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', position: 'relative', minHeight: '400px' }}>
+            {isFeatureLocked('hashtagStrategy') && (
+              <LockedOverlay 
+                benefit="Get 25 niche hashtags tailored to your brand" 
+                onUpgrade={() => setShowUpgradeModal(true)} 
+              />
+            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '8px' }}>
+              <div>
+                 <h3 style={{ fontSize: '20px', fontWeight: '800' }}>Hashtag Strategy</h3>
+                 <p style={{ color: '#666', fontSize: '14px' }}>Optimized tags based on your niche, audience, and brand.</p>
+              </div>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button 
+                  onClick={handleCopyAllStrategyTags}
+                  disabled={!hashtagStrategy || loading}
+                  style={{ backgroundColor: '#1a1a1a', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', opacity: (!hashtagStrategy || loading) ? 0.5 : 1 }}
+                >
+                  {copiedId === 'all-strategy-tags' ? <Check size={16} /> : <Copy size={16} />}
+                  {copiedId === 'all-strategy-tags' ? 'Copied' : 'Copy All 25 Hashtags'}
+                </button>
+                <button 
+                  onClick={handleGenerateStrategyHashtags}
+                  disabled={loading}
+                  style={{ backgroundColor: 'white', color: '#1a1a1a', border: '1px solid rgba(0,0,0,0.1)', padding: '10px 20px', borderRadius: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}
+                >
+                  {loading ? <Loader2 className="animate-spin" size={16} /> : <RefreshCw size={16} />}
+                  Regenerate Strategy
+                </button>
+              </div>
+            </div>
+
+            {loading && !hashtagStrategy ? (
+              <div style={{ padding: '60px', textAlign: 'center' }}>
+                <Loader2 className="animate-spin" size={32} style={{ color: '#C6A96B', margin: '0 auto 16px' }} />
+                <p style={{ color: '#666', fontWeight: '600' }}>Generating your custom strategy...</p>
+              </div>
+            ) : hashtagStrategy ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                
+                {/* NICHE GROUP */}
+                <div style={{ padding: '24px', borderRadius: '20px', backgroundColor: 'white', border: '1px solid rgba(0,0,0,0.05)' }}>
+                  <h4 style={{ fontSize: '14px', fontWeight: '800', marginBottom: '16px', color: '#1a1a1a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ width: '24px', height: '24px', borderRadius: '6px', backgroundColor: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}>1</span>
+                    GROUP 1 — NICHE HASHTAGS
+                    <span style={{ fontSize: '12px', fontWeight: '500', color: '#666', marginLeft: 'auto' }}>High Relevance • Medium Size</span>
+                  </h4>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                    {hashtagStrategy.niche?.map((tag, i) => (
+                      <div key={i} style={{ padding: '8px 12px', borderRadius: '10px', backgroundColor: '#f9f9f9', border: '1px solid rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '14px', color: '#333', fontWeight: '600' }}>#{tag.tag.replace('#','')}</span>
+                        <span style={{ fontSize: '11px', color: '#888', fontWeight: '700', backgroundColor: 'rgba(0,0,0,0.04)', padding: '2px 6px', borderRadius: '4px' }}>{tag.reach}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* GROWTH GROUP */}
+                <div style={{ padding: '24px', borderRadius: '20px', backgroundColor: 'white', border: '1px solid rgba(0,0,0,0.05)' }}>
+                  <h4 style={{ fontSize: '14px', fontWeight: '800', marginBottom: '16px', color: '#1a1a1a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ width: '24px', height: '24px', borderRadius: '6px', backgroundColor: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}>2</span>
+                    GROUP 2 — GROWTH HASHTAGS
+                    <span style={{ fontSize: '12px', fontWeight: '500', color: '#666', marginLeft: 'auto' }}>Reach Extension • 100K-500K Size</span>
+                  </h4>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                    {hashtagStrategy.growth?.map((tag, i) => (
+                      <div key={i} style={{ padding: '8px 12px', borderRadius: '10px', backgroundColor: '#f9f9f9', border: '1px solid rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '14px', color: '#333', fontWeight: '600' }}>#{tag.tag.replace('#','')}</span>
+                        <span style={{ fontSize: '11px', color: '#888', fontWeight: '700', backgroundColor: 'rgba(0,0,0,0.04)', padding: '2px 6px', borderRadius: '4px' }}>{tag.reach}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* BRAND GROUP */}
+                <div style={{ padding: '24px', borderRadius: '20px', backgroundColor: 'white', border: '1px solid rgba(0,0,0,0.05)' }}>
+                  <h4 style={{ fontSize: '14px', fontWeight: '800', marginBottom: '16px', color: '#1a1a1a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ width: '24px', height: '24px', borderRadius: '6px', backgroundColor: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}>3</span>
+                    GROUP 3 — BRAND HASHTAGS
+                    <span style={{ fontSize: '12px', fontWeight: '500', color: '#666', marginLeft: 'auto' }}>Custom • Small Size</span>
+                  </h4>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                    {hashtagStrategy.brand?.map((tag, i) => (
+                      <div key={i} style={{ padding: '8px 12px', borderRadius: '10px', backgroundColor: '#fdfbf7', border: '1px solid rgba(198,169,107,0.2)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '14px', color: '#C6A96B', fontWeight: '700' }}>#{tag.tag.replace('#','')}</span>
+                        <span style={{ fontSize: '11px', color: '#C6A96B', opacity: 0.8, fontWeight: '700', backgroundColor: 'rgba(198,169,107,0.1)', padding: '2px 6px', borderRadius: '4px' }}>{tag.reach}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* PRO TIP */}
+                <div style={{ padding: '20px', borderRadius: '16px', backgroundColor: 'rgba(198, 169, 107, 0.05)', border: '1px solid rgba(198, 169, 107, 0.2)', display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+                  <Sparkles size={20} style={{ color: '#C6A96B', flexShrink: 0, marginTop: '2px' }} />
+                  <div>
+                    <strong style={{ fontSize: '14px', color: '#1a1a1a', display: 'block', marginBottom: '4px' }}>Pro Tip</strong>
+                    <p style={{ fontSize: '14px', color: '#666', lineHeight: '1.5' }}>Use 3-5 niche hashtags + 3-5 growth hashtags + 1-2 brand hashtags per post for best reach.</p>
+                  </div>
+                </div>
+
+              </div>
+            ) : null}
+          </div>
+        )}
+
+        {/* BRAND VOICE TAB */}
+        {activeTab === 'voice' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', position: 'relative', minHeight: '400px' }}>
+            {isFeatureLocked('brandVoice') && (
+              <LockedOverlay 
+                benefit="Rewrite any text in your exact brand tone" 
+                onUpgrade={() => setShowUpgradeModal(true)} 
+              />
+            )}
+             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                {(brandData?.brandVoice?.split(',') || ['Refined', 'Minimal', 'Luxury']).map((tone, i) => (
+                  <span key={i} style={{ padding: '8px 16px', borderRadius: '99px', backgroundColor: 'rgba(198, 169, 107, 0.1)', color: '#C6A96B', fontWeight: '800', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{tone.trim()}</span>
+                ))}
+             </div>
+
+             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <h4 style={{ fontSize: '14px', fontWeight: '800' }}>Write in my brand voice</h4>
+                <textarea 
+                  value={voiceInput}
+                  onChange={(e) => setVoiceInput(e.target.value)}
+                  placeholder="Paste your rough text here..."
+                  style={{ height: '150px', padding: '20px', borderRadius: '20px', border: '1px solid rgba(0,0,0,0.1)', resize: 'none', outline: 'none' }}
+                />
+                <button 
+                  onClick={handleRefineVoice}
+                  disabled={loading || !voiceInput}
+                  style={{ backgroundColor: '#1a1a1a', color: 'white', border: 'none', padding: '16px', borderRadius: '16px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyCenter: 'center', gap: '10px' }}
+                >
+                  {loading ? <Loader2 className="animate-spin" size={18} /> : <Zap size={18} />}
+                  Refine with AI
+                </button>
+             </div>
+
+             <AnimatePresence>
+               {refinedVoiceText && (
+                 <motion.div 
+                   initial={{ opacity: 0, y: 10 }}
+                   animate={{ opacity: 1, y: 0 }}
+                   style={{ padding: '32px', borderRadius: '24px', backgroundColor: '#fafafa', border: '1px solid #C6A96B', position: 'relative' }}
+                 >
+                    <div style={{ position: 'absolute', top: '20px', right: '20px' }}>
+                      <button onClick={() => handleCopy(refinedVoiceText, 'refined')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#666' }}>
+                        {copiedId === 'refined' ? <Check size={18} color="green" /> : <Copy size={18} />}
+                      </button>
+                    </div>
+                    <h5 style={{ fontSize: '10px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.15em', color: '#C6A96B', marginBottom: '16px' }}>Polished Version</h5>
+                    <p style={{ fontSize: '16px', lineHeight: '1.6', color: '#1a1a1a', fontStyle: 'italic' }}>"{refinedVoiceText}"</p>
+                 </motion.div>
+               )}
+             </AnimatePresence>
+          </div>
         )}
       </div>
-
-       {activeTab === 'captions' && (
-          <div className="relative group">
-             <input 
-                type="text"
-                value={postTopic}
-                onChange={(e) => setPostTopic(e.target.value)}
-                placeholder="What essence shall we capture today?"
-                className="w-full bg-surface border-none shadow-sm focus:shadow-md outline-none rounded-2xl px-14 py-5 font-bold text-primary transition-all placeholder:text-muted/40 placeholder:font-medium"
-             />
-             <MessageSquare className="absolute left-5 top-1/2 -translate-y-1/2 text-accent" size={24} />
-             <button 
-                onClick={fetchData}
-                disabled={loading}
-                className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-primary text-secondary rounded-xl hover:scale-105 transition-all disabled:opacity-50 shadow-lg"
-             >
-                <Send size={20} />
-             </button>
-          </div>
-       )}
-
-      <div className="flex flex-col gap-4 relative min-h-[300px]">
-        <AnimatePresence mode="wait">
-          {loading ? (
-             <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="flex flex-col items-center justify-center gap-4 py-20"
-             >
-                <div className="relative">
-                   <div className="w-12 h-12 border-2 border-accent/20 border-t-accent rounded-full animate-spin"></div>
-                   <Sparkles className="absolute inset-0 m-auto text-accent animate-pulse" size={20} />
-                </div>
-                <span className="text-secondary font-ui text-sm tracking-widest uppercase animate-pulse">AI is writing...</span>
-             </motion.div>
-          ) : (
-            <motion.div 
-               initial={{ opacity: 0 }}
-               animate={{ opacity: 1 }}
-               className="flex flex-col gap-4"
-            >
-               {activeTab === 'ideas' && data.ideas.map((idea, idx) => (
-                 <motion.div 
-                   initial={{ x: -20, opacity: 0 }}
-                   animate={{ x: 0, opacity: 1 }}
-                   transition={{ delay: idx * 0.1 }}
-                   key={idx} 
-                   className="glass-card p-8 flex justify-between items-center group border-none shadow-sm h-32 bg-surface"
-                 >
-                   <div className="flex items-center gap-6 flex-1">
-                      <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center text-accent shrink-0 shadow-inner">
-                         <Lightbulb size={28} />
-                      </div>
-                      <div>
-                         <div className="text-[10px] uppercase tracking-widest font-black text-accent mb-1.5">{idea.contentType} hook</div>
-                         <div className="font-headline text-xl text-primary font-bold leading-snug">{idea.title}</div>
-                      </div>
-                   </div>
-                   <button onClick={() => copyText(idea.title, idx)} className="text-muted hover:text-accent p-4 rounded-2xl hover:bg-accent/10 transition-all shrink-0 border border-transparent hover:border-accent/20">
-                     {copiedIndex === idx ? <CheckCircle size={24} className="text-accent" /> : <Copy size={24} />}
-                   </button>
-                 </motion.div>
-               ))}
-
-               {activeTab === 'captions' && data.captions.map((caption, idx) => (
-                 <motion.div 
-                   initial={{ y: 20, opacity: 0 }}
-                   animate={{ y: 0, opacity: 1 }}
-                   transition={{ delay: idx * 0.1 }}
-                   key={idx} 
-                   className="glass-card p-10 flex flex-col gap-8 border-none shadow-md bg-surface"
-                 >
-                    <div className="flex items-start gap-5">
-                       <Quote className="text-accent shrink-0 mt-2" size={28} />
-                       <div className="font-body text-xl text-primary leading-relaxed whitespace-pre-wrap font-medium">{caption}</div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between pt-6 border-t border-light">
-                       <div className="flex items-center gap-3 text-[10px] uppercase tracking-widest font-black text-muted">
-                          <MessageSquare size={14} className="text-accent" /> Perception: {selectedTone}
-                       </div>
-                       <button onClick={() => copyText(caption, idx)} className="btn btn-primary px-8 h-12 flex items-center gap-3 text-[10px] font-black uppercase tracking-widest shadow-glow text-secondary">
-                         {copiedIndex === idx ? (
-                            <>
-                               <CheckCircle size={16} /> 
-                               <span>Copied to clipboard</span>
-                            </>
-                         ) : (
-                            <>
-                               <Copy size={16} /> 
-                               <span>Capture for Feed</span>
-                            </>
-                         )}
-                       </button>
-                    </div>
-                 </motion.div>
-               ))}
-
-              {activeTab === 'hashtags' && (
-                  <motion.div 
-                     initial={{ scale: 0.95, opacity: 0 }}
-                     animate={{ scale: 1, opacity: 1 }}
-                     className="glass-card p-10 flex flex-col gap-10 border-none shadow-md bg-surface"
-                  >
-                     <div className="flex items-center gap-4 pb-8 border-b border-light">
-                        <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center text-accent shadow-sm">
-                           <Hash size={24} />
-                        </div>
-                        <h4 className="font-headline text-3xl font-bold text-primary">Tag Architecture</h4>
-                     </div>
-                     <div className="flex flex-wrap gap-3">
-                        {data.hashtags.map((tag, idx) => (
-                          <span key={idx} className="px-5 py-2.5 bg-secondary border border-light rounded-xl text-[10px] font-black uppercase tracking-widest text-primary hover:border-accent transition-all cursor-default shadow-sm">
-                            {tag.tag || tag}
-                          </span>
-                        ))}
-                     </div>
-                     <div className="flex items-start gap-4 p-6 bg-accent/5 rounded-2xl border border-accent/10 group">
-                        <Info size={20} className="text-accent shrink-0 mt-0.5" />
-                        <p className="text-[11px] text-muted font-medium leading-relaxed">Pro-Tip: Placing optimized tags in the first comment maintains your feed's high-end aesthetic while maximizing reach.</p>
-                     </div>
-                     <button 
-                        onClick={() => copyText(data.hashtags.map(t => t.tag || t).join(' '), 'tags')}
-                        className="btn btn-primary self-start flex items-center gap-4 px-10 h-14 shadow-lg text-[10px] font-black uppercase tracking-widest text-secondary"
-                     >
-                        {copiedIndex === 'tags' ? <CheckCircle size={20} /> : <Copy size={20} />} 
-                        Deploy Tag Cloud
-                     </button>
-                  </motion.div>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+      <UpgradeModal isOpen={showUpgradeModal} onClose={() => setShowUpgradeModal(false)} />
     </div>
   );
 };

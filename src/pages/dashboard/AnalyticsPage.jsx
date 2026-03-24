@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, Users, ArrowUpRight, Sparkles, Target, Zap, Activity, Eye, Info, ChevronDown } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
+import { getActiveBrand } from '../../utils/storage';
+import { useEffect } from 'react';
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
@@ -22,15 +24,19 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 const AnalyticsPage = () => {
   const [activeSeries, setActiveSeries] = useState({ views: true, engagement: true });
-  const [brandData] = useState(() => {
-    const saved = sessionStorage.getItem('currentBrandKit');
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { console.error(e); }
-    }
-    return { brandName: 'Kreavia', vibe: 'Premium', colors: { primary: '#1A1A1A', accent: '#C6A96B' } };
+  const [brandData, setBrandData] = useState({ brandName: 'Kreavia', vibe: 'Premium', colors: { primary: '#1A1A1A', accent: '#C6A96B' } });
+  const [isLoaded, setIsLoaded] = useState(false);
 
-  });
-  const [isLoaded] = useState(true);
+  useEffect(() => {
+    const init = async () => {
+      const active = await getActiveBrand();
+      if (active) {
+        setBrandData(active);
+      }
+      setIsLoaded(true);
+    };
+    init();
+  }, []);
 
   const performanceData = [
     { name: 'Mon', views: 4000, engagement: 240, shares: 120 },

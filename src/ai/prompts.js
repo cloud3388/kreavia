@@ -51,28 +51,12 @@ Return valid JSON only. No extra text. No markdown fences.
 // 2. Logo Generator Prompt (Image Model)
 // ──────────────────────────────────────────
 export const buildLogoPrompt = (dna, palette, logoType = 'monogram') => `
-Minimal luxury ${logoType} logo for a ${dna.niche} creator brand named "${dna.brand_name}".
-
-Brand personality: ${dna.brand_personality}
-Style: ${dna.style}
-Visual energy: ${dna.visual_energy}
-Brand Brief: ${dna.brief}
-
-Design requirements:
-- minimal, clean, modern
-- premium aesthetic
-- Instagram and TikTok ready
-- scalable at small sizes
-- the logo text must read exactly "${dna.brand_name}"
-
-Color palette:
-Primary: ${palette.primary}
-Accent: ${palette.accent}
-Background: ${palette.background}
-
-Logo type: ${logoType}
-Render on a clean neutral background.
-No gradients. Vector art style.
+Minimal vector logo style ${logoType} mark for "${dna.brand_name}". 
+Niche: ${dna.niche}. Style: ${dna.style}. 
+Mood: ${dna.tone.replace(' ', ', ')}, ${dna.visual_energy}.
+Clean white background, single color icon mark using ${palette.primary}, 
+no gradients, no text inside logo, scalable symbol, 
+professional brand identity, SVG-ready.
 `.trim();
 
 // ──────────────────────────────────────────
@@ -179,17 +163,19 @@ You are a viral content strategist with 10+ years creating content for top creat
 
 CONTEXT
 Creator profile:
+Brand Name: "${dna.brand_name}"
+Brand Brief: "${dna.brief}"
 ${JSON.stringify({ niche: dna.niche, audience: dna.audience, tone: dna.tone, content_formats: dna.content_formats }, null, 2)}
 
 INSTRUCTIONS
-Generate ${count} short-form video content ideas for this creator.
+Generate ${count} short-form video content ideas tailored EXACTLY to the brand "${dna.brand_name}" and their brief: "${dna.brief}".
 
 Focus on:
-- Strong viral hooks that create curiosity
-- Relatable moments the audience experiences
+- Strong viral hooks that specifically mention or relate to the brief/product/service
+- Relatable moments the audience experiences with this specific niche
 - Trending formats: POV, Day in the life, Myth-busting, Tutorial, Reaction
 - Ideas that match the brand tone and personality
-- Mix of content types: educational, inspirational, entertaining
+- DO NOT generate generic industry hooks. Make them specific to "${dna.brand_name}".
 
 OUTPUT FORMAT
 Return valid JSON array only. No extra text.
@@ -211,17 +197,19 @@ ROLE
 You are a social media growth strategist specialising in hashtag research.
 
 CONTEXT
+Brand Name: "${dna.brand_name}"
+Brand Brief: "${dna.brief}"
 Creator niche: ${dna.niche}
 Audience: ${dna.audience}
 Brand style: ${dna.style}
 
 INSTRUCTIONS
-Generate 20 Instagram hashtags for this creator.
+Generate 20 Instagram hashtags tailored exactly to this brand and their brief.
 
 Include a strategic mix:
-- 5 large hashtags (1M+ posts) for discovery
-- 10 medium hashtags (100K–1M posts) for reach
-- 5 small/niche hashtags (under 100K posts) for targeted engagement
+- 5 large hashtags (1M+ posts) for discovery within the ${dna.niche} space
+- 10 medium hashtags (100K–1M posts) specific to the brand's services/product
+- 5 small/niche hashtags (under 100K posts) including localized or ultra-specific tags for "${dna.brand_name}"
 
 Avoid:
 - Banned hashtags

@@ -1,10 +1,37 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { PricingCards } from '../components/PricingCards';
 import { Sparkles, Palette, Type, Layout, Zap, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useAuth } from '../context/AuthContext';
 import logo from '../assets/logo.png';
 
 const LandingPage = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  
+  const handlePricingAction = (data) => {
+    if (data.plan === 'Pro Studio') {
+      const monthlyUrl = 'https://kreaviaai.lemonsqueezy.com/checkout/buy/4f343bae-36aa-41a1-806e-882b469317dd';
+      const yearlyUrl = 'https://kreaviaai.lemonsqueezy.com/checkout/buy/1341cf75-0a4a-4a7e-952a-89dbf6625cae';
+      
+      const baseUrl = data.isYearly ? yearlyUrl : monthlyUrl;
+      const checkoutUrl = new URL(baseUrl);
+      
+      if (user) {
+        checkoutUrl.searchParams.set('checkout[email]', user.email);
+        checkoutUrl.searchParams.set('checkout[custom][user_id]', user.id);
+        window.open(checkoutUrl.toString(), '_blank');
+      } else {
+        navigate('/signup');
+      }
+    } else if (user) {
+      navigate('/dashboard');
+    } else {
+      navigate('/signup');
+    }
+  };
+
   return (
     <div className="animate-fade-in overflow-hidden">
       {/* Hero Section - 12 Column Grid / 820px Height */}
@@ -85,7 +112,7 @@ const LandingPage = () => {
                 style={{ top: '10%' }}
              >
                 <div className="aspect-[4/5] p-8 flex flex-col justify-center items-center text-center relative overflow-hidden" style={{ backgroundColor: '#F5F5F5' }}>
-                   <div className="absolute inset-0 opacity-10 mix-blend-overlay" style={{ backgroundImage: "url('https://grainy-gradients.vercel.app/noise.svg')" }}></div>
+                   <div className="absolute inset-0 opacity-10 mix-blend-overlay" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.4'/%3E%3C/svg%3E\")" }}></div>
                    <div className="w-16 h-16 mb-6 flex items-center justify-center">
                      <img src={logo} alt="Logo" className="w-12 h-12 object-contain" />
                    </div>
@@ -165,65 +192,7 @@ const LandingPage = () => {
            <p className="text-xl text-muted font-body font-medium">Everything you need to build your brand identity.</p>
          </div>
          
-         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl w-full">
-            {/* Free Plan */}
-            <div className="glass-card p-10 bg-surface flex flex-col gap-5 border border-light/50 relative">
-               <div className="text-muted text-[10px] font-bold uppercase tracking-widest">Free</div>
-               <div className="flex flex-col mb-2">
-                 <div className="text-4xl font-headline font-bold text-primary">$0<span className="text-base text-muted font-medium">/mo</span></div>
-                 <p className="text-xs text-muted mt-1">Get started with the basics</p>
-               </div>
-               <div className="h-px bg-light/30 w-full mb-2"></div>
-               <ul className="flex flex-col gap-3 flex-1">
-                  <li className="flex items-start gap-3 text-primary text-sm font-medium"><CheckCircle2 size={16} className="text-muted shrink-0 mt-0.5" /> 1 AI brand generation</li>
-                  <li className="flex items-start gap-3 text-primary text-sm font-medium"><CheckCircle2 size={16} className="text-muted shrink-0 mt-0.5" /> 5 templates</li>
-                  <li className="flex items-start gap-3 text-primary text-sm font-medium"><CheckCircle2 size={16} className="text-muted shrink-0 mt-0.5" /> Basic analytics</li>
-                  <li className="flex items-start gap-3 text-primary text-sm font-medium"><CheckCircle2 size={16} className="text-muted shrink-0 mt-0.5" /> Limited content ideas</li>
-               </ul>
-               <Link to="/signup" className="btn btn-outline border-light w-full h-12 uppercase font-bold tracking-widest text-[11px] mt-4">Current Plan</Link>
-            </div>
-            
-            {/* Pro Plan */}
-            <div className="glass-card p-10 bg-accent/5 flex flex-col gap-5 border border-accent relative overflow-hidden shadow-[0_0_30px_rgba(198,169,107,0.15)]">
-               <div className="absolute top-0 right-0 left-0 flex justify-center -translate-y-1/2">
-                  <span className="bg-accent text-primary text-[10px] font-bold px-4 py-1 rounded-full uppercase tracking-widest shadow-md">Most Popular</span>
-               </div>
-               <div className="text-accent text-[10px] font-bold uppercase tracking-widest pt-2">Pro</div>
-               <div className="flex flex-col mb-2">
-                 <div className="text-4xl font-headline font-bold text-primary">$29<span className="text-base text-muted font-medium">/mo</span></div>
-                 <p className="text-xs text-muted mt-1">Everything you need to grow</p>
-               </div>
-               <div className="h-px bg-light/30 w-full mb-2"></div>
-               <ul className="flex flex-col gap-3 flex-1">
-                  <li className="flex items-start gap-3 text-primary text-sm font-medium"><CheckCircle2 size={16} className="text-accent shrink-0 mt-0.5" /> 10 AI brand generations</li>
-                  <li className="flex items-start gap-3 text-primary text-sm font-medium"><CheckCircle2 size={16} className="text-accent shrink-0 mt-0.5" /> 200+ premium templates</li>
-                  <li className="flex items-start gap-3 text-primary text-sm font-medium"><CheckCircle2 size={16} className="text-accent shrink-0 mt-0.5" /> Full analytics suite</li>
-                  <li className="flex items-start gap-3 text-primary text-sm font-medium"><CheckCircle2 size={16} className="text-accent shrink-0 mt-0.5" /> Unlimited content ideas</li>
-                  <li className="flex items-start gap-3 text-primary text-sm font-medium"><CheckCircle2 size={16} className="text-accent shrink-0 mt-0.5" /> Custom brand guidelines PDF</li>
-                  <li className="flex items-start gap-3 text-primary text-sm font-medium"><CheckCircle2 size={16} className="text-accent shrink-0 mt-0.5" /> Priority AI support</li>
-               </ul>
-               <Link to="/signup" className="btn btn-primary w-full h-12 bg-accent uppercase font-bold tracking-widest text-[11px] shadow-glow hover:scale-[1.02] mt-4">Upgrade to Pro</Link>
-            </div>
-
-            {/* Agency Plan */}
-            <div className="glass-card p-10 bg-surface flex flex-col gap-5 border border-light/50 relative">
-               <div className="text-muted text-[10px] font-bold uppercase tracking-widest">Agency</div>
-               <div className="flex flex-col mb-2">
-                 <div className="text-4xl font-headline font-bold text-primary">$99<span className="text-base text-muted font-medium">/mo</span></div>
-                 <p className="text-xs text-muted mt-1">For teams and brands</p>
-               </div>
-               <div className="h-px bg-light/30 w-full mb-2"></div>
-               <ul className="flex flex-col gap-3 flex-1">
-                  <li className="flex items-start gap-3 text-primary text-sm font-medium"><CheckCircle2 size={16} className="text-muted shrink-0 mt-0.5" /> Everything in Pro</li>
-                  <li className="flex items-start gap-3 text-primary text-sm font-medium"><CheckCircle2 size={16} className="text-muted shrink-0 mt-0.5" /> Up to 10 brand profiles</li>
-                  <li className="flex items-start gap-3 text-primary text-sm font-medium"><CheckCircle2 size={16} className="text-muted shrink-0 mt-0.5" /> Team collaboration</li>
-                  <li className="flex items-start gap-3 text-primary text-sm font-medium"><CheckCircle2 size={16} className="text-muted shrink-0 mt-0.5" /> White-label exports</li>
-                  <li className="flex items-start gap-3 text-primary text-sm font-medium"><CheckCircle2 size={16} className="text-muted shrink-0 mt-0.5" /> Dedicated account manager</li>
-                  <li className="flex items-start gap-3 text-primary text-sm font-medium"><CheckCircle2 size={16} className="text-muted shrink-0 mt-0.5" /> API access</li>
-               </ul>
-               <a href="mailto:sales@brandkitai.com" className="btn btn-outline border-light w-full h-12 uppercase font-bold tracking-widest text-[11px] mt-4">Contact Sales</a>
-            </div>
-         </div>
+         <PricingCards onAction={handlePricingAction} />
        </section>
     </div>
   );

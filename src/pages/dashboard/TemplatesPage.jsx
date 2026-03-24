@@ -1,653 +1,1320 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
-import { Download, Layout, X, Type, Image as ImageIcon, Palette, Copy, Shapes, Sparkles, Loader2, Wand2, Phone } from 'lucide-react';
+import { 
+  Download, 
+  X, 
+  Type, 
+  Image as ImageIcon, 
+  Palette, 
+  Copy, 
+  Shapes, 
+  Sparkles, 
+  Loader2, 
+  Wand2, 
+  Smartphone,
+  Check,
+  RefreshCw,
+  Layout,
+  MousePointer2,
+  Trash2,
+  Plus,
+  ChevronRight,
+  RotateCcw,
+  Star,
+  Heart,
+  Circle,
+  Square,
+  Triangle,
+  Hexagon,
+  Zap,
+  Flame,
+  Crown,
+  Diamond,
+  Award,
+  Shield,
+  Sun,
+  Moon,
+  Cloud,
+  Droplet,
+  Share2,
+  Lock
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { generateImage } from '../../services/nvidiaService';
-import TemplateRenderer from '../../components/dashboard/TemplateRenderer';
 import html2canvas from 'html2canvas';
 
-const DEFAULT_BRAND = {
-  brandName: 'Kreavia',
-  brandArchetype: 'The Visionary',
-  colors: { primary: '#1A1A1A', accent: '#C6A96B', highlight: '#F5F5F7', secondary: '#FBFBFD' },
-  typography: { headline: 'Playfair Display', body: 'Inter', ui: 'Satoshi' },
-  logos: [],
-};
+// Plan Permissions
+import { 
+  canExportTemplate, 
+  incrementExportCount, 
+  isFeatureLocked, 
+  getPlanStatus, 
+  getExportLimitInfo,
+  incrementGenerationCount
+} from '../../utils/planPermissions';
+import UpgradeModal from '../../components/UpgradeModal';
+import { NudgeToast } from '../../components/common/UpgradeNudges';
 
-const PRESET_TEMPLATES = [
-  { id: 1, type: 'quote', name: 'Visionary Quote 01', text: 'The ultimate expression of simplicity is sophistication.' },
-  { id: 2, type: 'reel_cover', name: 'Premium Reel Cover', text: 'THE ART OF CREATION' },
-  { id: 3, type: 'story', name: 'Resource Highlight', text: 'RESOURCES' },
-  { id: 4, type: 'carousel', name: 'Educational Swipe', text: '3 Ways to Elevate Your Visual Output →' },
-  { id: 5, type: 'educational', name: 'Pro Wisdom', text: 'How to maintain brand consistency across all platforms.' },
-  { id: 6, type: 'quote', name: 'Bold Statement', text: 'Design is intelligence made visible.' }
+// Internal Services
+import { generateImage } from '../../services/nvidiaService';
+import { generateTemplates, generateCaptions } from '../../services/brandAiService';
+import { getBrands, getActiveBrand, saveBrand, saveTemplateState, getTemplateState } from '../../utils/storage';
+
+// Internal Components
+import TemplateRenderer from '../../components/dashboard/TemplateRenderer';
+import ShapePropertyEditor from '../../components/dashboard/ShapePropertyEditor';
+import DraggableElement from '../../components/dashboard/DraggableElement';
+import { LockedOverlay, BlurredCard, LockedButton } from '../../components/common/LockedFeatures';
+
+const EDITOR_TABS = [
+  { id: 'text', icon: <Type size={20} />, label: 'Text Content' },
+  { id: 'palette', icon: <Palette size={20} />, label: 'Brand Palette' },
+  { id: 'geometry', icon: <Shapes size={20} />, label: 'Geometry' },
+  { id: 'media', icon: <ImageIcon size={20} />, label: 'Media Upload' },
+  { id: 'elements', icon: <Sparkles size={20} />, label: 'Elements' },
 ];
 
+const DEFAULT_BRAND_DATA = {
+  brandName: 'Brand',
+  colors: {
+    primary: '#1A1A1A',
+    secondary: '#FFFFFF',
+    accent: '#C6A96B',
+    highlight: '#F5F5F7'
+  },
+  typography: {
+    headline: 'Playfair Display',
+    body: 'Inter'
+  }
+};
+
 const TemplatesPage = () => {
-  const [filter, setFilter] = useState('all');
+  const navigate = useNavigate();
+  const [templates, setTemplates] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [hasBrandKit, setHasBrandKit] = useState(true);
   const [editingTemplate, setEditingTemplate] = useState(null);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedBg, setGeneratedBg] = useState(null);
-  const [brandData, setBrandData] = useState(null); // Changed from DEFAULT_BRAND
-  const [localBrandData, setLocalBrandData] = useState(DEFAULT_BRAND);
+  const [activeTab, setActiveTab] = useState('text');
+  const [isSaving, setIsSaving] = useState(false);
+  
+  // Element Canvas State
+  const [canvasElements, setCanvasElements] = useState([]);
+  const [selectedElementId, setSelectedElementId] = useState(null);
+  const [elementsSubTab, setElementsSubTab] = useState('emoji'); // 'emoji' or 'png'
+  const [selectedElementColor, setSelectedElementColor] = useState('#1A1A1A');
+  
+  // Media Tab State
+  const [mediaSubTab, setMediaSubTab] = useState('solid'); // 'solid', 'gradient', 'image', 'ai'
+  const [solidColorHex, setSolidColorHex] = useState('#ffffff');
+  const [aiBgPrompt, setAiBgPrompt] = useState('');
+  const [aiBgStyle, setAiBgStyle] = useState('Minimal');
+  const [aiBgHistory, setAiBgHistory] = useState([]);
+  
+  // Local Editor State
+  const [localBrandData, setLocalBrandData] = useState(DEFAULT_BRAND_DATA);
   const [localText, setLocalText] = useState('');
-  const [activeTab, setActiveTab] = useState('typography');
-  const [templates, setTemplates] = useState([]); // New state for templates
-  const [isGeneratingTemplates, setIsGeneratingTemplates] = useState(true); // New state for template loading
+  const [subHeadline, setSubHeadline] = useState('');
+  const [badgeText, setBadgeText] = useState('');
+  const [extraBody, setExtraBody] = useState('');
+  
+  const [isGeneratingBg, setIsGeneratingBg] = useState(false);
+
+  // Export & Share State
+  const [saveStatus, setSaveStatus] = useState('idle'); // 'idle', 'saving', 'saved'
+  const [showDownloadMenu, setShowDownloadMenu] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareCaption, setShareCaption] = useState('');
+  const [isCopying, setIsCopying] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showExportToast, setShowExportToast] = useState(false);
 
   useEffect(() => {
-    const savedKit = sessionStorage.getItem('kreavia_brand_data'); // Changed key
-    if (savedKit) {
+    const init = async () => {
       try {
-        const parsed = JSON.parse(savedKit);
-        const merged = { 
-          ...DEFAULT_BRAND, 
-          ...parsed, 
-          colors: { ...DEFAULT_BRAND.colors, ...(parsed.colors || {}) }, 
-          typography: { ...DEFAULT_BRAND.typography, ...(parsed.typography || {}) } 
+        setLoading(true);
+        // 1. Try to get active brand from storage
+        let rawKit = await getActiveBrand();
+        
+        // 2. Fallback to sessionStorage if storage found nothing
+        if (!rawKit) {
+          const savedSession = sessionStorage.getItem('currentBrandKit');
+          if (savedSession) {
+             rawKit = JSON.parse(savedSession);
+          }
+        }
+
+        if (!rawKit) {
+           setHasBrandKit(false);
+           setLoading(false);
+           return;
+        }
+        
+        // Keep sessionStorage synced for cross-component stability
+        sessionStorage.setItem('currentBrandKit', JSON.stringify(rawKit));
+        setHasBrandKit(true);
+
+        // Normalize brand data shape
+        const brand = {
+          brandName: rawKit.dna?.brand_name || rawKit.brandName || 'Brand',
+          niche: rawKit.dna?.niche || rawKit.niche || 'Lifestyle',
+          brandVoice: rawKit.brandVoice || rawKit.dna?.tone || 'Premium',
+          targetAudience: rawKit.dna?.audience || '',
+          colors: rawKit.colors || { primary: '#1A1A1A', accent: '#C6A96B', highlight: '#F5F5F7', secondary: '#FFFFFF' },
+          typography: rawKit.typography || { headline: 'Playfair Display', body: 'Inter' },
+          logos: rawKit.logos || [],
+          ...rawKit
         };
-        setBrandData(merged);
-        setLocalBrandData(merged);
-        loadAiTemplates(merged); // Call loadAiTemplates with parsed data
-      } catch (err) {
-        console.error('Failed to parse brand kit:', err);
-        setTemplates(PRESET_TEMPLATES); // Fallback
-        setIsGeneratingTemplates(false);
+        setLocalBrandData(brand);
+        
+        // Dynamically load Google Fonts for the templates
+        if (brand.typography) {
+          const fonts = [brand.typography.headline, brand.typography.body].filter(Boolean);
+          if (fonts.length > 0) {
+             const fontQuery = fonts.map(f => `family=${f.replace(/ /g, '+')}:wght@400;500;700;900`).join('&');
+            const link = document.createElement('link');
+            link.href = `https://fonts.googleapis.com/css2?${fontQuery}&display=swap`;
+            link.rel = 'stylesheet';
+            document.head.appendChild(link);
+          }
+        }
+        
+        const data = await generateTemplates(brand);
+        setTemplates(data || []);
+      } catch (e) {
+        console.error('Failed to load templates:', e);
+      } finally {
+        setLoading(false);
       }
-    } else {
-      setTemplates(PRESET_TEMPLATES); // Fallback if no brand data
-      setIsGeneratingTemplates(false);
-    }
+    };
+    init();
   }, []);
 
-  const loadAiTemplates = async (data) => {
-    try {
-      setIsGeneratingTemplates(true);
-      const savedTemplates = sessionStorage.getItem('kreavia_ai_templates');
-      if (savedTemplates) {
-         setTemplates(JSON.parse(savedTemplates));
-         setIsGeneratingTemplates(false);
-         return;
+  const handleOpenEditor = async (template) => {
+    setEditingTemplate(template);
+    
+    const savedState = await getTemplateState(template.id);
+    if (savedState) {
+      try {
+        setLocalBrandData(savedState.localBrandData || localBrandData);
+        setLocalText(savedState.localText || template.text || '');
+        setSubHeadline(savedState.subHeadline || '');
+        setBadgeText(savedState.badgeText || '');
+        setExtraBody(savedState.extraBody || '');
+        setCanvasElements(savedState.canvasElements || []);
+      } catch (e) {
+        console.error('Failed to parse saved state:', e);
       }
-      const generated = await generateTemplates(data);
-      setTemplates(generated);
-      sessionStorage.setItem('kreavia_ai_templates', JSON.stringify(generated));
-    } catch (err) {
-      console.error('Failed to generate templates', err);
-      setTemplates(PRESET_TEMPLATES);
-    } finally {
-      setIsGeneratingTemplates(false);
+    } else {
+      setLocalText(template.text || '');
+      setSubHeadline('');
+      setBadgeText('');
+      setExtraBody('');
+      setCanvasElements([]);
+      const savedBrand = sessionStorage.getItem('currentBrandKit');
+      if (savedBrand) {
+        const rawKit = JSON.parse(savedBrand);
+        const brand = {
+          brandName: rawKit.dna?.brand_name || rawKit.brandName || 'Brand',
+          niche: rawKit.dna?.niche || rawKit.niche || 'Lifestyle',
+          brandVoice: rawKit.brandVoice || rawKit.dna?.tone || 'Premium',
+          colors: rawKit.colors || { primary: '#1A1A1A', accent: '#C6A96B', highlight: '#F5F5F7', secondary: '#FFFFFF' },
+          typography: rawKit.typography || { headline: 'Playfair Display', body: 'Inter' },
+          logos: rawKit.logos || [],
+          ...rawKit
+        };
+        setLocalBrandData(brand);
+      }
+    }
+    
+    setActiveTab('text');
+    setSelectedElementId(null);
+  };
+
+  useEffect(() => {
+    if (!editingTemplate) return;
+    
+    setSaveStatus('saving');
+    const timer = setTimeout(async () => {
+      const stateToSave = {
+        localBrandData,
+        localText,
+        subHeadline,
+        badgeText,
+        extraBody,
+        canvasElements
+      };
+      await saveTemplateState(editingTemplate.id, stateToSave);
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 2000);
+    }, 2000);
+    
+    return () => clearTimeout(timer);
+  }, [localBrandData, localText, subHeadline, badgeText, extraBody, canvasElements, editingTemplate]);
+
+  const handleAddCanvasElement = (type, content, iconName = null, customX = 50, customY = 50) => {
+    const id = Date.now().toString();
+    const newEl = {
+      id,
+      type,
+      content,
+      iconName,
+      x: customX,
+      y: customY,
+      width: type === 'text' ? 300 : 120, // default wider width for text blocks
+      height: type === 'text' ? 100 : 120,
+      rotation: 0,
+      zIndex: canvasElements.length + 10,
+      color: type === 'png' ? selectedElementColor : undefined,
+      fontFamily: type === 'text' ? (localBrandData.typography?.headline || 'Inter') : undefined,
+      fontSize: type === 'text' ? 36 : undefined,
+      align: type === 'text' ? 'center' : undefined,
+      lineHeight: type === 'text' ? 1.2 : undefined,
+    };
+    setCanvasElements([...canvasElements, newEl]);
+    setSelectedElementId(id);
+  };
+
+  const updateCanvasElement = (updatedEl) => {
+    setCanvasElements(canvasElements.map(e => e.id === updatedEl.id ? updatedEl : e));
+  };
+
+  const deleteCanvasElement = (id) => {
+    setCanvasElements(canvasElements.filter(e => e.id !== id));
+    if (selectedElementId === id) setSelectedElementId(null);
+  };
+
+  const bringForward = (id) => {
+    const sorted = [...canvasElements].sort((a,b) => a.zIndex - b.zIndex);
+    const idx = sorted.findIndex(e => e.id === id);
+    if (idx < sorted.length - 1) {
+      // Swap zIndex with the next one up
+      const temp = sorted[idx].zIndex;
+      sorted[idx].zIndex = sorted[idx+1].zIndex;
+      sorted[idx+1].zIndex = temp;
+      setCanvasElements([...sorted]);
     }
   };
 
-  const handleDownloadJPG = async () => {
-    const canvas = document.getElementById('template-canvas');
-    if (!canvas) return;
-    try {
-      const dataUrl = await html2canvas(canvas, { 
-        scale: 2, 
-        useCORS: true,
-        backgroundColor: '#FFFFFF' 
-      }).then(c => c.toDataURL('image/jpeg', 0.95));
-      
-      const activeBrandName = (brandData || DEFAULT_BRAND).brandName || 'Brand';
-      const link = document.createElement('a');
-      link.download = `${activeBrandName}-Asset-${Date.now()}.jpg`;
-      link.href = dataUrl;
-      link.click();
-    } catch (err) {
-      console.error('Export failed:', err);
+  const sendBackward = (id) => {
+    const sorted = [...canvasElements].sort((a,b) => a.zIndex - b.zIndex);
+    const idx = sorted.findIndex(e => e.id === id);
+    if (idx > 0) {
+      // Swap zIndex with the previous one
+      const temp = sorted[idx].zIndex;
+      sorted[idx].zIndex = sorted[idx-1].zIndex;
+      sorted[idx-1].zIndex = temp;
+      setCanvasElements([...sorted]);
     }
   };
 
-  const handleGenerateBackground = async () => {
-    if (!localBrandData) return;
-    setIsGenerating(true);
+  // EMOJI DICTIONARY
+  const EMOJI_CATEGORIES = {
+    Expressions: ['😀','😂','😍','😎','🤔','😡','🥺','🤯','🥳'],
+    Nature: ['🌸','🌴','🔥','⭐','✨','⚡','🌊','🍎','🍄'],
+    Objects: ['💎','👑','📱','📸','🎨','🚀','💡','🛒','🏆'],
+    Symbols: ['✅','💯','❌','⚠️','❤️','💖','🔥','💬','💭'],
+    Arrows: ['➡️','⬅️','⬆️','⬇️','↗️','↘️','🔄','↪️','🔽']
+  };
+
+  // PNG (Lucide) DICTIONARY
+  const PNG_CATEGORIES = {
+    Shapes: [
+      { id: 'circle', icon: Circle },
+      { id: 'square', icon: Square },
+      { id: 'triangle', icon: Triangle },
+      { id: 'hexagon', icon: Hexagon }
+    ],
+    Decorative: [
+      { id: 'star', icon: Star },
+      { id: 'sparkles', icon: Sparkles },
+      { id: 'sun', icon: Sun },
+      { id: 'moon', icon: Moon },
+      { id: 'cloud', icon: Cloud },
+      { id: 'droplet', icon: Droplet }
+    ],
+    Brand: [
+      { id: 'crown', icon: Crown },
+      { id: 'diamond', icon: Diamond },
+      { id: 'zap', icon: Zap },
+      { id: 'flame', icon: Flame },
+      { id: 'heart', icon: Heart },
+      { id: 'shield', icon: Shield },
+      { id: 'award', icon: Award }
+    ]
+  };
+
+  const handleDownloadAdvanced = async (format) => {
+    if (!canExportTemplate()) {
+      setShowUpgradeModal(true);
+      return;
+    }
+
+    setShowDownloadMenu(false);
+    const el = document.getElementById('editor-preview-canvas');
+    if (!el) return;
+    
+    setIsSaving(true);
+    setSelectedElementId(null);
+    
+    // allow React to strip borders
+    await new Promise(r => setTimeout(r, 100));
     
     try {
-      const variations = ['cinematic lighting', 'ethereal atmosphere', 'abstract textures', 'minimal composition', 'dreamy focus'];
-      const randomVar = variations[Math.floor(Math.random() * variations.length)];
-      
-      const prompt = `Premium ${localBrandData.vibe || 'minimalist'} ${localBrandData.niche || 'lifestyle'} lifestyle aesthetic, ${randomVar}, 
-      high quality photography, soft depth of field, color palette: ${Object.values(localBrandData.colors).join(', ')}. 
-      Seed: ${Date.now()}. No text, professional studio light.`;
-      
-      const imageUrl = await generateImage(prompt);
-      if (imageUrl) {
-        setLocalBrandData({ ...localBrandData, customBg: imageUrl });
-        setGeneratedBg(imageUrl);
+      let scale = 2;
+      let exportFormat = 'image/png';
+      let extension = 'png';
+      const width = el.offsetWidth;
+
+      if (format === 'square_png') {
+        scale = 1080 / width; // High quality 1080 width base
+      } else if (format === 'story_png') {
+        scale = 1080 / 360; // Usually 360px wide for stories in DOM
+      } else if (format === 'compressed_jpg') {
+        exportFormat = 'image/jpeg';
+        extension = 'jpg';
+        scale = 1.5;
       }
-    } catch (err) {
-      console.error('Generation failed:', err);
+      
+      const canvas = await html2canvas(el, { scale, useCORS: true, backgroundColor: null });
+      const dataUrl = canvas.toDataURL(exportFormat, format === 'compressed_jpg' ? 0.8 : 1.0);
+      
+      const brandNameStr = (localBrandData.brandName || 'brand').toLowerCase().replace(/[^a-z0-9]/g, '-');
+      const tempNameStr = (editingTemplate?.name || 'template').toLowerCase().replace(/[^a-z0-9]/g, '-');
+      const dateString = new Date().toISOString().split('T')[0];
+      
+      const link = document.createElement('a');
+      link.download = `${brandNameStr}-${tempNameStr}-${dateString}.${extension}`;
+      link.href = dataUrl;
+      link.click();
+
+      // Track the export
+      incrementExportCount();
+
+      // Nudge 2: Show toast after first export
+      const { used } = getExportLimitInfo();
+      if (used === 1) {
+        setShowExportToast(true);
+        setTimeout(() => setShowExportToast(false), 4000);
+      }
+    } catch (e) {
+      console.error('Export failed:', e);
     } finally {
-      setIsGenerating(false);
+      setIsSaving(false);
     }
   };
 
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setLocalBrandData({ ...localBrandData, customBg: event.target.result });
-      };
-      reader.readAsDataURL(file);
+  const handleShareClick = async () => {
+    setShowShareModal(true);
+    setShareCaption('Generating tailored caption...');
+    const topic = editingTemplate?.text || editingTemplate?.name || 'My Brand Journey';
+    const caps = await generateCaptions(localBrandData, topic);
+    if (caps && caps.length > 0) {
+      // Pick the "Medium" or first available caption from the AI array
+      const bestCap = caps.find(c => c.type === 'Medium') || caps[0];
+      setShareCaption(bestCap.caption || bestCap.text || typeof bestCap === 'string' ? bestCap : JSON.stringify(bestCap));
+    } else {
+      setShareCaption("Here's a look at my latest brand aesthetic. Drop a comment below if you resonate with this vibe! ✨");
     }
   };
 
-  // const templates = [ // Removed static templates array
-  //   { id: 1, type: 'instagram', title: 'Quote Post', renderType: 'quote', text: 'Elegance is the only beauty that never fades.' },
-  //   { id: 2, type: 'reels', title: 'Reel Cover A', renderType: 'reel_cover', text: 'CREATING THE FUTURE' },
-  //   { id: 3, type: 'story', title: 'Story Highlight', renderType: 'story', text: 'VIBE CHECK' },
-  //   { id: 4, type: 'instagram', title: 'Carousel Slide 1', renderType: 'carousel', text: '3 Tips for Minimalist Living' },
-  //   { id: 5, type: 'reels', title: 'Reel Cover B', renderType: 'reel_cover', text: 'A DAY IN THE LIFE' },
-  //   { id: 6, type: 'instagram', title: 'Announcement', renderType: 'quote', text: 'BIG THINGS COMING SOON' },
-  //   { id: 7, type: 'story', title: 'Q&A Template', renderType: 'story', text: 'ASK ANYTHING' },
-  //   { id: 8, type: 'instagram', title: 'Tip of the Day', renderType: 'carousel', text: 'How to Build Consistency' },
-  //   { id: 9, type: 'instagram', title: 'Educational', renderType: 'educational', text: 'How to maintain brand consistency.' },
-  // ];
+  const copyShareCaption = () => {
+    navigator.clipboard.writeText(shareCaption);
+    setIsCopying(true);
+    setTimeout(() => setIsCopying(false), 2000);
+  };
 
-  const filtered = filter === 'all' ? templates : templates.filter(t => t.type === filter);
+  const handleAiBg = async () => {
+    if (isFeatureLocked('editorAIFeature')) {
+      setShowUpgradeModal(true);
+      return;
+    }
+    setIsGeneratingBg(true);
+    try {
+      const finalPrompt = aiBgPrompt.trim() 
+        ? `${aiBgStyle} style: ${aiBgPrompt}. Color palette: ${localBrandData.colors.accent}, ${localBrandData.colors.primary}. High resolution, studio quality.`
+        : `${aiBgStyle} minimalist ${localBrandData.industry || 'lifestyle'} background, cinematic lighting, aesthetic textures, color palette: ${localBrandData.colors.accent}, ${localBrandData.colors.primary}. High resolution, studio quality.`;
+        
+      const url = await generateImage(finalPrompt);
+      if (url) {
+        incrementGenerationCount();
+        setLocalBrandData({ ...localBrandData, customBg: url, colors: {...localBrandData.colors, backgroundOverride: null} });
+        setAiBgHistory(prev => [url, ...prev].slice(0, 3));
+      }
+    } catch (e) {
+      console.error('AI BG failed:', e);
+    } finally {
+      setIsGeneratingBg(false);
+    }
+  };
+
+  if (!hasBrandKit) {
+    return (
+      <div style={{ padding: '80px 40px', maxWidth: '800px', margin: '0 auto', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+        <div style={{ width: '80px', height: '80px', borderRadius: '50%', backgroundColor: 'rgba(198, 169, 107, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
+           <Crown size={32} color="#C6A96B" />
+        </div>
+        <h2 style={{ fontSize: '32px', fontWeight: '900', color: '#1a1a1a', marginBottom: '16px' }}>Generate your brand kit first</h2>
+        <p style={{ fontSize: '16px', color: '#666', marginBottom: '32px', maxWidth: '400px', lineHeight: 1.5 }}>
+          You need an active brand identity before you can see personalized templates tailored for your niche.
+        </p>
+        <button 
+          onClick={() => navigate('/onboarding')}
+          style={{ padding: '16px 32px', backgroundColor: '#1a1a1a', color: 'white', borderRadius: '16px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.1em', fontSize: '12px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 10px 30px -10px rgba(0,0,0,0.5)' }}
+        >
+          <Sparkles size={16} /> Generate Brand Kit
+        </button>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: '#666' }}>
+        <Loader2 className="animate-spin" size={32} />
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col gap-10 w-full max-w-7xl mx-auto pb-20 pt-8 animate-fade-in">
-       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-4 md:px-0">
-          <div>
-            <h2 className="text-4xl font-headline font-bold text-primary mb-2">Editorial Templates</h2>
-            <p className="text-muted text-sm font-medium">Fully customizable layouts synchronized with your brand DNA.</p>
-          </div>
-          <div className="flex gap-4 p-1 bg-surface border border-light rounded-2xl w-max shadow-sm">
-             {['all', 'instagram', 'reels', 'story'].map(f => (
-               <button 
-                 key={f}
-                 onClick={() => setFilter(f)} 
-                 className={`px-6 py-2.5 rounded-xl font-black tracking-widest uppercase text-[10px] transition-all ${filter === f ? 'bg-accent text-white shadow-glow' : 'text-muted hover:text-primary hover:bg-black/5'}`}
-               >
-                 {f === 'all' ? 'All' : f}
-               </button>
-             ))}
-          </div>
-       </div>
+    <div style={{ padding: '40px 0', maxWidth: '1400px', margin: '0 auto' }}>
+      <header style={{ marginBottom: '48px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+        <div>
+          <h1 style={{ fontSize: '36px', fontWeight: '800', marginBottom: '8px', color: '#1a1a1a' }}>Design Studio</h1>
+          <p style={{ color: '#666', fontSize: '14px' }}>Your brand essence, translated into high-conversion visuals.</p>
+        </div>
+      </header>
 
-       {/* Grid */}
-         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {isGeneratingTemplates ? (
-               Array.from({ length: 6 }).map((_, i) => (
-                 <motion.div 
-                   key={i} 
-                   initial={{ opacity: 0, y: 20 }}
-                   animate={{ opacity: 1, y: 0 }}
-                   className="aspect-[4/5] bg-secondary border border-light/50 rounded-[2rem] overflow-hidden flex flex-col relative"
-                 >
-                   <div className="flex-1 bg-light/30 animate-pulse flex items-center justify-center p-8">
-                      <Wand2 size={32} className="text-muted/20" />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '32px' }}>
+        {templates.map(t => (
+          <motion.div 
+            key={t.id}
+            whileHover={{ y: -8 }}
+            style={{ 
+              backgroundColor: 'white', 
+              borderRadius: '32px', 
+              overflow: 'hidden', 
+              border: '1px solid rgba(0,0,0,0.05)', 
+              boxShadow: '0 10px 30px -10px rgba(0,0,0,0.05)',
+              cursor: 'pointer'
+            }}
+            onClick={() => handleOpenEditor(t)}
+          >
+            <div style={{ aspectRatio: '4/5', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '10%', position: 'relative' }}>
+              <div style={{ width: '100%', height: '100%', borderRadius: '12px', boxShadow: '0 20px 40px -15px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
+                <TemplateRenderer type={t.type} brandData={localBrandData} text={t.text} scale={0.5} />
+              </div>
+              <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', opacity: 0, transition: 'opacity 0.3s', display: 'flex', alignItems: 'center', justifyContent: 'center' }} className="hover-overlay">
+                <button style={{ backgroundColor: '#C6A96B', color: 'white', border: 'none', padding: '12px 24px', borderRadius: '12px', fontWeight: '800', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Edit Template</button>
+              </div>
+            </div>
+            <div style={{ padding: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3 style={{ fontSize: '14px', fontWeight: '800', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t.name}</h3>
+                <span style={{ fontSize: '10px', color: '#C6A96B', fontWeight: '700', textTransform: 'uppercase' }}>{t.type}</span>
+              </div>
+              <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999' }}>
+                <Layout size={18} />
+              </div>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Editor Modal */}
+      {createPortal(
+        <AnimatePresence>
+          {editingTemplate && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.95)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(20px)' }}
+            >
+              <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'row', backgroundColor: '#0a0a0a', color: 'white', overflow: 'hidden' }}>
+                
+                {/* 1. Left Tab Rail */}
+                <div style={{ width: '80px', borderRight: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '24px 0', gap: '20px', backgroundColor: '#0d0d0d' }}>
+                   {EDITOR_TABS.map(tab => (
+                     <button 
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      style={{ 
+                        width: '48px', 
+                        height: '48px', 
+                        borderRadius: '16px', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        backgroundColor: activeTab === tab.id ? '#C6A96B' : 'transparent',
+                        color: activeTab === tab.id ? 'white' : 'rgba(255,255,255,0.4)',
+                        border: 'none',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        position: 'relative'
+                      }}
+                      title={tab.label}
+                     >
+                        {tab.icon}
+                        {activeTab === tab.id && <motion.div layoutId="tab-indicator" style={{ position: 'absolute', right: '-1px', width: '3px', height: '24px', backgroundColor: '#C6A96B', borderRadius: '3px 0 0 3px' }} />}
+                     </button>
+                   ))}
+                   
+                   <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      <button 
+                        onClick={() => setEditingTemplate(null)}
+                        style={{ width: '40px', height: '40px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', backgroundColor: 'transparent' }}
+                      >
+                        <X size={20} />
+                      </button>
                    </div>
-                   <div className="p-6 bg-surface border-t border-light/50 flex flex-col gap-2">
-                       <div className="h-3 w-3/4 bg-light animate-pulse rounded-full"></div>
-                       <div className="h-2 w-1/3 bg-light animate-pulse rounded-full"></div>
-                   </div>
-                 </motion.div>
-               ))
-            ) : filtered.length > 0 ? filtered.map(template => ( 
-               <motion.div 
-                 key={template.id}
-                 initial={{ opacity: 0, y: 20 }}
-                 animate={{ opacity: 1, y: 0 }}
-                 className="group cursor-pointer relative rounded-[2rem] overflow-hidden border border-light/50 shadow-sm hover:shadow-2xl transition-all duration-500 bg-secondary"
-               >
-                <div className="flex-1 relative overflow-hidden bg-highlight/30 flex items-center justify-center p-8">
-                   <div className="w-full h-full shadow-2xl rounded-lg overflow-hidden scale-[0.85] group-hover:scale-100 transition-transform duration-700 origin-center">
-                      <TemplateRenderer 
-                        type={template.type} // Changed from renderType to type
-                        brandData={brandData || DEFAULT_BRAND} 
-                        text={template.text} 
-                      />
+                </div>
+
+                {/* 2. Controls Panel */}
+                <div style={{ width: '380px', backgroundColor: '#0d0d0d', padding: '32px', display: 'flex', flexDirection: 'column', gap: '32px', borderRight: '1px solid rgba(255,255,255,0.05)', overflowY: 'auto' }}>
+                  <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h2 style={{ fontSize: '11px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#C6A96B' }}>{EDITOR_TABS.find(t => t.id === activeTab)?.label}</h2>
+                  </header>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                    {activeTab === 'text' && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                         <div style={{ padding: '24px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
+                            <Type size={32} color="rgba(255,255,255,0.2)" style={{ margin: '0 auto 16px' }} />
+                            <h3 style={{ fontSize: '12px', fontWeight: '800', color: 'white', marginBottom: '8px' }}>Interactive Typography</h3>
+                            <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.5, marginBottom: '20px' }}>
+                              You can now click any text directly on the canvas to style it inline, or double-click anywhere to spawn new text.
+                            </p>
+                            <button 
+                              onClick={() => handleAddCanvasElement('text', '<p>Type something...</p>')}
+                              style={{ 
+                                width: '100%', 
+                                padding: '14px', 
+                                borderRadius: '12px', 
+                                backgroundColor: '#C6A96B', 
+                                color: 'white', 
+                                border: 'none', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'center',
+                                gap: '8px',
+                                fontSize: '12px',
+                                fontWeight: '900',
+                                cursor: 'pointer',
+                                boxShadow: '0 4px 12px rgba(198, 169, 107, 0.3)'
+                              }}
+                            >
+                               <Plus size={16} /> Add New Text Block
+                            </button>
+                         </div>
+                      </div>
+                    )}
+
+                    {activeTab === 'palette' && (
+                       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                             {Object.entries(localBrandData.colors || {}).map(([key, val]) => (
+                               key !== 'backgroundOverride' && (
+                                <button 
+                                  key={key}
+                                  onClick={() => setLocalBrandData({...localBrandData, colors: {...localBrandData.colors, backgroundOverride: val}})}
+                                  style={{ padding: '16px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
+                                >
+                                  <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: val, border: '2px solid rgba(255,255,255,0.1)' }}></div>
+                                  <span style={{ fontSize: '9px', fontWeight: '900', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)' }}>{key}</span>
+                                  <span style={{ fontSize: '10px', fontWeight: '700', fontFamily: 'monospace' }}>{val}</span>
+                                </button>
+                               )
+                             ))}
+                          </div>
+                          
+                          <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                             <label style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: '800', textTransform: 'uppercase' }}>Quick Aesthetics</label>
+                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                <button 
+                                  onClick={() => setLocalBrandData({...localBrandData, colors: {...localBrandData.colors, primary: localBrandData.colors.highlight, highlight: localBrandData.colors.primary}})}
+                                  style={{ border: '1px solid rgba(255,255,255,0.1)', backgroundColor: 'transparent', padding: '10px', fontSize: '10px', color: 'white', borderRadius: '8px', cursor: 'pointer' }}
+                                >
+                                  Invert Focus
+                                </button>
+                                <button 
+                                 onClick={() => setLocalBrandData({...localBrandData, colors: {...localBrandData.colors, primary: '#000000', accent: '#000000', highlight: '#F1F1F1', secondary: '#FFFFFF'}})}
+                                 style={{ border: '1px solid rgba(255,255,255,0.1)', backgroundColor: 'transparent', padding: '10px', fontSize: '10px', color: 'white', borderRadius: '8px', cursor: 'pointer' }}
+                                >
+                                  Minimalist
+                                </button>
+                             </div>
+                             <button 
+                              onClick={() => setLocalBrandData(DEFAULT_BRAND_DATA)}
+                              style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid rgba(198, 169, 107, 0.4)', backgroundColor: 'rgba(198, 169, 107, 0.05)', color: '#C6A96B', fontSize: '10px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '10px', cursor: 'pointer' }}
+                             >
+                                <RotateCcw size={12} style={{ marginRight: '8px' }} /> Restore Brand Sync
+                             </button>
+                          </div>
+                       </div>
+                    )}
+
+                    {activeTab === 'geometry' && (
+                       <ShapePropertyEditor 
+                        shapes={localBrandData.shapes || []} 
+                        onUpdate={(s) => setLocalBrandData({...localBrandData, shapes: s})} 
+                       />
+                    )}
+
+                    {activeTab === 'media' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                           {/* Media Subtabs */}
+                           <div style={{ display: 'flex', gap: '8px', padding: '4px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '12px' }}>
+                              {['solid', 'gradient', 'image', 'ai'].map(tab => (
+                                <button 
+                                  key={tab}
+                                  onClick={() => setMediaSubTab(tab)}
+                                  style={{ flex: 1, padding: '10px 4px', borderRadius: '8px', border: 'none', backgroundColor: mediaSubTab === tab ? '#C6A96B' : 'transparent', color: mediaSubTab === tab ? 'white' : 'rgba(255,255,255,0.5)', fontSize: '10px', fontWeight: '900', textTransform: 'uppercase', cursor: 'pointer' }}
+                                >
+                                  {tab}
+                                </button>
+                              ))}
+                           </div>
+
+                           {mediaSubTab === 'solid' && (
+                             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                               <h4 style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: '800', textTransform: 'uppercase' }}>Brand Colors</h4>
+                               <div style={{ display: 'flex', gap: '12px' }}>
+                                 {Object.entries(localBrandData.colors || {}).map(([key, val]) => (
+                                   key !== 'backgroundOverride' && (
+                                     <button 
+                                       key={key}
+                                       onClick={() => setLocalBrandData({...localBrandData, customBg: null, colors: {...localBrandData.colors, backgroundOverride: val}})}
+                                       style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: val, border: '2px solid rgba(255,255,255,0.1)', cursor: 'pointer' }}
+                                       title={key}
+                                     />
+                                   )
+                                 ))}
+                               </div>
+                               <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '20px' }}>
+                                 <h4 style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: '800', textTransform: 'uppercase', marginBottom: '12px' }}>Custom Color</h4>
+                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                   <input 
+                                     type="color" 
+                                     value={solidColorHex} 
+                                     onChange={e => {
+                                       setSolidColorHex(e.target.value);
+                                       setLocalBrandData({...localBrandData, customBg: null, colors: {...localBrandData.colors, backgroundOverride: e.target.value}});
+                                     }}
+                                     style={{ width: '32px', height: '32px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                   />
+                                   <input 
+                                     type="text" 
+                                     value={solidColorHex}
+                                     onChange={e => {
+                                       setSolidColorHex(e.target.value);
+                                       if (/^#[0-9A-F]{6}$/i.test(e.target.value)) {
+                                          setLocalBrandData({...localBrandData, customBg: null, colors: {...localBrandData.colors, backgroundOverride: e.target.value}});
+                                       }
+                                     }}
+                                     style={{ backgroundColor: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '8px', borderRadius: '6px', fontSize: '12px', width: '80px', fontFamily: 'monospace' }}
+                                   />
+                                 </div>
+                               </div>
+                             </div>
+                           )}
+
+                           {mediaSubTab === 'gradient' && (
+                             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                               <h4 style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: '800', textTransform: 'uppercase' }}>Brand Gradients</h4>
+                               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                 {[
+                                   `linear-gradient(135deg, ${localBrandData.colors.primary}, ${localBrandData.colors.accent})`,
+                                   `linear-gradient(45deg, ${localBrandData.colors.secondary}, ${localBrandData.colors.highlight})`,
+                                   `linear-gradient(to bottom, ${localBrandData.colors.primary}, #000000)`,
+                                   `radial-gradient(circle at center, ${localBrandData.colors.accent}, ${localBrandData.colors.primary})`,
+                                   `linear-gradient(to right, ${localBrandData.colors.secondary}, rgba(0,0,0,0.05))`,
+                                   `conic-gradient(from 180deg at 50% 50%, ${localBrandData.colors.primary}, ${localBrandData.colors.accent}, ${localBrandData.colors.primary})`
+                                 ].map((grad, i) => (
+                                   <button 
+                                     key={i}
+                                     onClick={() => setLocalBrandData({...localBrandData, customBg: null, colors: {...localBrandData.colors, backgroundOverride: grad}})}
+                                     style={{ height: '64px', borderRadius: '12px', background: grad, border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer' }}
+                                   />
+                                 ))}
+                               </div>
+                             </div>
+                           )}
+
+                           {mediaSubTab === 'image' && (
+                             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                               <input 
+                                 type="file" 
+                                 id="upload-bg" 
+                                 hidden 
+                                 onChange={(e) => {
+                                   const file = e.target.files?.[0];
+                                   if (file) {
+                                     const reader = new FileReader();
+                                     reader.onload = (ev) => {
+                                        setLocalBrandData({...localBrandData, customBg: ev.target.result, colors: {...localBrandData.colors, backgroundOverride: null}});
+                                     };
+                                     reader.readAsDataURL(file);
+                                   }
+                                 }}
+                               />
+                               <label 
+                                 htmlFor="upload-bg"
+                                 style={{ width: '100%', padding: '24px', borderRadius: '16px', border: '1px dashed rgba(255,255,255,0.2)', backgroundColor: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.8)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', cursor: 'pointer', textAlign: 'center' }}
+                               >
+                                  <ImageIcon size={24} color="#C6A96B" />
+                                  <span style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Upload Image Background</span>
+                               </label>
+
+                               {localBrandData.customBg && (
+                                 <div style={{ padding: '16px', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                   <label style={{ fontSize: '10px', color: 'rgba(255,255,255,0.6)', fontWeight: '800', display: 'flex', justifyContent: 'space-between' }}>
+                                      <span>Image Opacity</span>
+                                      <span>{Math.round((localBrandData.bgOpacity !== undefined ? localBrandData.bgOpacity : 0.6) * 100)}%</span>
+                                   </label>
+                                   <input 
+                                     type="range" 
+                                     min="0" max="1" step="0.05"
+                                     value={localBrandData.bgOpacity !== undefined ? localBrandData.bgOpacity : 0.6}
+                                     onChange={(e) => setLocalBrandData({...localBrandData, bgOpacity: parseFloat(e.target.value)})}
+                                     style={{ width: '100%', accentColor: '#C6A96B' }}
+                                   />
+                                 </div>
+                               )}
+
+                               <h4 style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: '800', textTransform: 'uppercase' }}>Curated Textures</h4>
+                               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                 {[
+                                   { name: 'Subtle Paper', url: 'https://www.transparenttextures.com/patterns/rice-paper-2.png' },
+                                   { name: 'Linen', url: 'https://www.transparenttextures.com/patterns/woven.png' },
+                                   { name: 'Marble', url: 'https://www.transparenttextures.com/patterns/white-diamond-dark.png' },
+                                   { name: 'Dark Grain', url: 'https://www.transparenttextures.com/patterns/black-paper.png' },
+                                   { name: 'Light Noise', url: 'https://www.transparenttextures.com/patterns/noise-lines.png' },
+                                   { name: 'Soft Blur', url: 'https://www.transparenttextures.com/patterns/stardust.png' },
+                                   { name: 'Geometric', url: 'https://www.transparenttextures.com/patterns/cubes.png' },
+                                   { name: 'Minimal Dots', url: 'https://www.transparenttextures.com/patterns/dots.png' }
+                                 ].map((tex, i) => (
+                                   <div 
+                                     key={i} 
+                                     onClick={() => setLocalBrandData({...localBrandData, customBg: tex.url, colors: {...localBrandData.colors, backgroundOverride: null}})}
+                                     style={{ position: 'relative', height: '60px', borderRadius: '10px', overflow: 'hidden', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.1)' }}
+                                   >
+                                     <img src={tex.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt={tex.name} />
+                                     <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <span style={{ fontSize: '10px', fontWeight: '800', color: 'white' }}>{tex.name}</span>
+                                     </div>
+                                   </div>
+                                 ))}
+                               </div>
+                             </div>
+                           )}
+
+                           {mediaSubTab === 'ai' && (
+                             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', position: 'relative' }}>
+                               {isFeatureLocked('editorAIFeature') && (
+                                 <div style={{ position: 'absolute', inset: -10, zIndex: 10, backdropFilter: 'blur(4px)', backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px', textAlign: 'center' }}>
+                                   <Sparkles size={32} color="#C6A96B" style={{ marginBottom: '12px' }} />
+                                   <h4 style={{ fontSize: '14px', fontWeight: '800', marginBottom: '4px' }}>AI Backgrounds</h4>
+                                   <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.6)', marginBottom: '16px' }}>Upgrade to Pro to generate custom high-end AI backgrounds.</p>
+                                   <button onClick={() => setShowUpgradeModal(true)} style={{ padding: '8px 16px', backgroundColor: '#C6A96B', color: 'white', border: 'none', borderRadius: '8px', fontSize: '10px', fontWeight: '900', textTransform: 'uppercase', cursor: 'pointer' }}>Unlock Pro</button>
+                                 </div>
+                               )}
+                               <div style={{ display: 'flex', gap: '12px' }}>
+                                 <select 
+                                  value={aiBgStyle} 
+                                  onChange={e => setAiBgStyle(e.target.value)}
+                                  style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', color: 'white', padding: '12px', borderRadius: '12px', fontSize: '12px', outline: 'none' }}
+                                 >
+                                    {['Minimal', 'Luxury', 'Dark', 'Pastel', 'Editorial', 'Abstract'].map(s => <option key={s} value={s}>{s}</option>)}
+                                 </select>
+                               </div>
+
+                               <textarea 
+                                 value={aiBgPrompt}
+                                 onChange={e => setAiBgPrompt(e.target.value)}
+                                 placeholder="Describe a custom background... (optional)"
+                                 style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', color: 'white', padding: '16px', borderRadius: '12px', fontSize: '12px', height: '80px', resize: 'none' }}
+                               />
+
+                               <LockedButton
+                                 isLocked={isFeatureLocked('editorAIFeature')}
+                                 benefit="Generate custom high-end AI backgrounds"
+                                 onUpgrade={() => setShowUpgradeModal(true)}
+                                 style={{ width: '100%' }}
+                               >
+                                 <button 
+                                   onClick={handleAiBg}
+                                   disabled={isGeneratingBg}
+                                   style={{ 
+                                     width: '100%', 
+                                     padding: '16px', 
+                                     borderRadius: '12px', 
+                                     border: 'none',
+                                     backgroundColor: '#C6A96B', 
+                                     color: 'white', 
+                                     display: 'flex', 
+                                     alignItems: 'center', 
+                                     justifyContent: 'center',
+                                     gap: '8px',
+                                     fontWeight: '800',
+                                     cursor: 'pointer'
+                                   }}
+                                 >
+                                    {isGeneratingBg ? <Loader2 className="animate-spin" size={18} /> : <Wand2 size={18} />}
+                                    {isGeneratingBg ? 'Generating...' : 'Generate New Background'}
+                                 </button>
+                               </LockedButton>
+
+                               {aiBgHistory.length > 0 && (
+                                 <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '20px' }}>
+                                   <h4 style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: '800', textTransform: 'uppercase', marginBottom: '12px' }}>Recent AI Generations</h4>
+                                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                                     {aiBgHistory.map((url, i) => (
+                                       <img 
+                                         key={i} 
+                                         src={url} 
+                                         onClick={() => setLocalBrandData({...localBrandData, customBg: url, colors: {...localBrandData.colors, backgroundOverride: null}})}
+                                         style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: '8px', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.1)' }} 
+                                         alt="History bg"
+                                       />
+                                     ))}
+                                   </div>
+                                 </div>
+                               )}
+                             </div>
+                           )}
+                        </div>
+                     )}
+
+                     {activeTab === 'elements' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                           {/* Subtabs */}
+                           <div style={{ display: 'flex', gap: '10px', padding: '4px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '12px' }}>
+                               <LockedButton
+                                 isLocked={isFeatureLocked('editorEmojiPng')}
+                                 benefit="Unlock premium vectors and emoji sets for your designs"
+                                 onUpgrade={() => setShowUpgradeModal(true)}
+                                 style={{ flex: 1 }}
+                               >
+                                 <button 
+                                   onClick={() => {
+                                     if (isFeatureLocked('editorEmojiPng')) {
+                                       setShowUpgradeModal(true);
+                                     } else {
+                                       setElementsSubTab('emoji');
+                                     }
+                                   }}
+                                   style={{ width: '100%', padding: '10px', borderRadius: '8px', border: 'none', backgroundColor: elementsSubTab === 'emoji' ? '#C6A96B' : 'transparent', color: elementsSubTab === 'emoji' ? 'white' : 'rgba(255,255,255,0.5)', fontSize: '12px', fontWeight: '800', cursor: 'pointer', position: 'relative' }}
+                                 >
+                                   EMOJIS
+                                   {isFeatureLocked('editorEmojiPng') && <Crown size={10} style={{ position: 'absolute', top: '4px', right: '4px', color: '#C6A96B' }} />}
+                                 </button>
+                               </LockedButton>
+                               <LockedButton
+                                 isLocked={isFeatureLocked('editorEmojiPng')}
+                                 benefit="Unlock premium vectors and emoji sets for your designs"
+                                 onUpgrade={() => setShowUpgradeModal(true)}
+                                 style={{ flex: 1 }}
+                               >
+                                 <button 
+                                    onClick={() => {
+                                      if (isFeatureLocked('editorEmojiPng')) {
+                                        setShowUpgradeModal(true);
+                                      } else {
+                                        setElementsSubTab('png');
+                                      }
+                                    }}
+                                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: 'none', backgroundColor: elementsSubTab === 'png' ? '#C6A96B' : 'transparent', color: elementsSubTab === 'png' ? 'white' : 'rgba(255,255,255,0.5)', fontSize: '12px', fontWeight: '800', cursor: 'pointer', position: 'relative' }}
+                                  >
+                                    PNG ELEMENTS
+                                    {isFeatureLocked('editorEmojiPng') && <Crown size={10} style={{ position: 'absolute', top: '4px', right: '4px', color: '#C6A96B' }} />}
+                                  </button>
+                               </LockedButton>
+                           </div>
+
+                           {elementsSubTab === 'emoji' && (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', position: 'relative' }}>
+                                {isFeatureLocked('editorEmojiPng') && (
+                                   <div style={{ position: 'absolute', inset: -10, zIndex: 10, backdropFilter: 'blur(4px)', backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px', textAlign: 'center' }}>
+                                      <Lock size={32} color="#C6A96B" style={{ marginBottom: '12px' }} />
+                                      <h4 style={{ fontSize: '14px', fontWeight: '800', marginBottom: '4px' }}>Pro Elements</h4>
+                                      <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.6)', marginBottom: '16px' }}>Upgrade to Pro to unlock hundreds of premium Emojis and PNG elements.</p>
+                                      <button onClick={() => setShowUpgradeModal(true)} style={{ padding: '8px 16px', backgroundColor: '#C6A96B', color: 'white', border: 'none', borderRadius: '8px', fontSize: '10px', fontWeight: '900', textTransform: 'uppercase', cursor: 'pointer' }}>Unlock Pro</button>
+                                   </div>
+                                )}
+                                {Object.entries(EMOJI_CATEGORIES).map(([cat, emojis]) => (
+                                  <div key={cat}>
+                                    <h4 style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: '800', textTransform: 'uppercase', marginBottom: '12px' }}>{cat}</h4>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                      {emojis.map(emoji => (
+                                        <button 
+                                          key={emoji}
+                                          onClick={() => handleAddCanvasElement('emoji', emoji)}
+                                          style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', fontSize: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                                        >
+                                          {emoji}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                           )}
+
+                           {elementsSubTab === 'png' && (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', position: 'relative' }}>
+                                {isFeatureLocked('editorEmojiPng') && (
+                                   <div style={{ position: 'absolute', inset: -10, zIndex: 10, backdropFilter: 'blur(4px)', backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px', textAlign: 'center' }}>
+                                      <Lock size={32} color="#C6A96B" style={{ marginBottom: '12px' }} />
+                                      <h4 style={{ fontSize: '14px', fontWeight: '800', marginBottom: '4px' }}>Pro Elements</h4>
+                                      <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.6)', marginBottom: '16px' }}>Upgrade to Pro to unlock hundreds of premium Emojis and PNG elements.</p>
+                                      <button onClick={() => setShowUpgradeModal(true)} style={{ padding: '8px 16px', backgroundColor: '#C6A96B', color: 'white', border: 'none', borderRadius: '8px', fontSize: '10px', fontWeight: '900', textTransform: 'uppercase', cursor: 'pointer' }}>Unlock Pro</button>
+                                   </div>
+                                )}
+                                {/* Global Color Picker for newly standard elements */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                  <input 
+                                    type="color" 
+                                    value={selectedElementColor} 
+                                    onChange={e => {
+                                      const c = e.target.value;
+                                      setSelectedElementColor(c);
+                                      if (selectedElementId) {
+                                        const el = canvasElements.find(el => el.id === selectedElementId);
+                                        if (el && el.type === 'png') updateCanvasElement({ ...el, color: c });
+                                      }
+                                    }}
+                                    style={{ width: '28px', height: '28px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                  />
+                                  <span style={{ fontSize: '12px', color: 'white', fontWeight: '700' }}>Active Color</span>
+                                  <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
+                                    {['#FFFFFF', '#000000', localBrandData.colors.accent || '#C6A96B'].map(c => (
+                                      <button key={c} onClick={() => {
+                                        setSelectedElementColor(c);
+                                        if (selectedElementId) {
+                                          const el = canvasElements.find(e => e.id === selectedElementId);
+                                          if (el && el.type === 'png') updateCanvasElement({ ...el, color: c });
+                                        }
+                                      }} style={{ width: '20px', height: '20px', borderRadius: '4px', backgroundColor: c, border: '1px solid rgba(255,255,255,0.2)', cursor: 'pointer' }} />
+                                    ))}
+                                  </div>
+                                </div>
+
+                                {Object.entries(PNG_CATEGORIES).map(([cat, items]) => (
+                                  <div key={cat}>
+                                    <h4 style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: '800', textTransform: 'uppercase', marginBottom: '12px' }}>{cat}</h4>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                      {items.map(item => {
+                                        const IconComponent = item.icon;
+                                        return (
+                                          <button 
+                                            key={item.id}
+                                            onClick={() => handleAddCanvasElement('png', null, item.icon)}
+                                            style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                                          >
+                                            <IconComponent size={24} color={selectedElementColor} fill={cat === 'Shapes' ? selectedElementColor : 'none'} />
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                           )}
+                        </div>
+                     )}
+                  </div>
+
+                  {/* Deprecated Export Space - Purposely Empty */}
+                </div>
+
+                {/* 3. Preview Area */}
+                <div style={{ flex: 1, backgroundColor: '#111', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '60px', position: 'relative' }}>
+                   <div style={{ position: 'absolute', top: '40px', left: '40px', display: 'flex', gap: '12px', zIndex: 10 }}>
+                      <div style={{ padding: '8px 16px', borderRadius: '99px', backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                         <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#C6A96B', boxShadow: '0 0 10px #C6A96B' }}></div>
+                         <span style={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: '900', letterSpacing: '2px', color: 'rgba(255,255,255,0.6)' }}>LIVE SYNC ACTIVE</span>
+                      </div>
+                       
+                       {getPlanStatus().maxTemplateExports !== Infinity && (
+                         <div style={{ padding: '8px 16px', borderRadius: '99px', backgroundColor: 'rgba(198, 169, 107, 0.1)', border: '1px solid rgba(198, 169, 107, 0.2)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '900', color: '#C6A96B', letterSpacing: '0.05em' }}>
+                              {getExportLimitInfo().remaining} EXPORTS REMAINING
+                            </span>
+                         </div>
+                       )}
+                      
+                      <AnimatePresence>
+                        {saveStatus === 'saved' && (
+                          <motion.div 
+                            initial={{ opacity: 0, x: -10 }} 
+                            animate={{ opacity: 1, x: 0 }} 
+                            exit={{ opacity: 0, x: -10 }}
+                            style={{ padding: '8px 16px', borderRadius: '99px', backgroundColor: 'rgba(198, 169, 107, 0.1)', border: '1px solid rgba(198, 169, 107, 0.2)', display: 'flex', alignItems: 'center', gap: '8px', color: '#C6A96B' }}
+                          >
+                            <Check size={12} strokeWidth={3} />
+                            <span style={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: '900', letterSpacing: '1px' }}>Saved</span>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                    </div>
                    
-                   {/* Hover Actions */}
-                   <div className="absolute inset-0 bg-primary/80 opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col items-center justify-center gap-4 backdrop-blur-md">
-                      <button onClick={() => { 
-                        setEditingTemplate(template); 
-                        setGeneratedBg(null); 
-                        const activeBrand = brandData || DEFAULT_BRAND;
-                        setLocalBrandData({ ...activeBrand, shapes: activeBrand.shapes || [] });
-                        setLocalText(template.text);
-                      }} className="btn btn-primary text-[10px] font-black uppercase tracking-widest w-2/3 h-12 shadow-glow flex gap-2 items-center justify-center text-secondary">
-                        <Palette size={14} /> Open Editor
+                   <div style={{ position: 'absolute', top: '40px', right: '40px', display: 'flex', gap: '12px', zIndex: 50 }}>
+                      <button 
+                        onClick={handleShareClick}
+                        style={{ padding: '10px 20px', borderRadius: '12px', backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', fontSize: '11px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.1em' }}
+                      >
+                         <Share2 size={16} /> Share
                       </button>
-                      <button className="btn btn-outline border-white/20 text-white hover:border-accent hover:text-accent text-[10px] font-black uppercase tracking-widest w-2/3 h-12 flex gap-2 items-center justify-center">
-                        <Copy size={14} /> Duplicate
+                       <div style={{ position: 'relative' }}>
+                         <LockedButton
+                           isLocked={!canExportTemplate()}
+                           benefit="Upgrade to unlock unlimited high-quality exports"
+                           onUpgrade={() => setShowUpgradeModal(true)}
+                         >
+                           <button 
+                             onClick={() => setShowDownloadMenu(!showDownloadMenu)}
+                             style={{ padding: '10px 20px', borderRadius: '12px', backgroundColor: '#C6A96B', border: 'none', color: '#1a1a1a', fontSize: '11px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.1em' }}
+                           >
+                              {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} 
+                              {isSaving ? 'Exporting...' : 'Download'}
+                           </button>
+                         </LockedButton>
+                        
+                        <AnimatePresence>
+                          {showDownloadMenu && (
+                            <motion.div 
+                              initial={{ opacity: 0, y: 10 }} 
+                              animate={{ opacity: 1, y: 0 }} 
+                              exit={{ opacity: 0, y: 10 }}
+                              style={{ position: 'absolute', top: 'calc(100% + 10px)', right: 0, width: '220px', backgroundColor: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', padding: '8px', display: 'flex', flexDirection: 'column', gap: '4px', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}
+                            >
+                               <button onClick={() => handleDownloadAdvanced('square_png')} style={{ padding: '12px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', border: 'none', backgroundColor: 'transparent', textAlign: 'left', cursor: 'pointer', borderRadius: '8px' }} onMouseEnter={e => e.currentTarget.style.backgroundColor='rgba(255,255,255,0.05)'} onMouseLeave={e => e.currentTarget.style.backgroundColor='transparent'}>
+                                  <span style={{ fontSize: '12px', fontWeight: '800', color: 'white' }}>PNG (High Quality)</span>
+                                  <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)' }}>1080x1080 • Best for posts</span>
+                               </button>
+                               <button onClick={() => handleDownloadAdvanced('story_png')} style={{ padding: '12px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', border: 'none', backgroundColor: 'transparent', textAlign: 'left', cursor: 'pointer', borderRadius: '8px' }} onMouseEnter={e => e.currentTarget.style.backgroundColor='rgba(255,255,255,0.05)'} onMouseLeave={e => e.currentTarget.style.backgroundColor='transparent'}>
+                                  <span style={{ fontSize: '12px', fontWeight: '800', color: 'white' }}>PNG (Story Size)</span>
+                                  <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)' }}>1080x1920 • Best for stories</span>
+                               </button>
+                               <button onClick={() => handleDownloadAdvanced('compressed_jpg')} style={{ padding: '12px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', border: 'none', backgroundColor: 'transparent', textAlign: 'left', cursor: 'pointer', borderRadius: '8px' }} onMouseEnter={e => e.currentTarget.style.backgroundColor='rgba(255,255,255,0.05)'} onMouseLeave={e => e.currentTarget.style.backgroundColor='transparent'}>
+                                  <span style={{ fontSize: '12px', fontWeight: '800', color: 'white' }}>JPG (Compressed)</span>
+                                  <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)' }}>Small file size</span>
+                               </button>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                   </div>
+
+                   <div 
+                    id="editor-preview-canvas"
+                    style={{ 
+                      width: editingTemplate.type === 'story' ? '360px' : '450px', 
+                      height: editingTemplate.type === 'story' ? '640px' : '562px', 
+                      backgroundColor: 'white', 
+                      boxShadow: '0 40px 100px -20px rgba(0,0,0,0.8)',
+                      borderRadius: '4px',
+                      overflow: 'hidden',
+                      position: 'relative'
+                    }}
+                    onPointerDown={() => setSelectedElementId(null)}
+                   >
+                      <TemplateRenderer 
+                        type={editingTemplate.type} 
+                        brandData={localBrandData} 
+                        text={localText} 
+                        subHeadline={subHeadline}
+                        badgeText={badgeText}
+                        extraBody={extraBody}
+                        selectedElementId={selectedElementId}
+                        onSelectId={(id) => setSelectedElementId(id)}
+                        onUpdateText={(content) => setLocalText(content)}
+                        onUpdateSubHeadline={(content) => setSubHeadline(content)}
+                        onUpdateBadgeText={(content) => setBadgeText(content)}
+                        onUpdateExtraBody={(content) => setExtraBody(content)}
+                      />
+
+                      {/* Canvas Interactive Elements */}
+                      {canvasElements.map(el => (
+                         <DraggableElement
+                           key={el.id}
+                           element={el}
+                           brandData={localBrandData}
+                           isSelected={selectedElementId === el.id}
+                           onSelect={() => setSelectedElementId(el.id)}
+                           onUpdate={updateCanvasElement}
+                           onDelete={() => deleteCanvasElement(el.id)}
+                           onBringForward={() => bringForward(el.id)}
+                           onSendBackward={() => sendBackward(el.id)}
+                         />
+                      ))}
+
+                       {/* Watermark Overlay */}
+                       {getPlanStatus().hasWatermark && (
+                          <div style={{ 
+                            position: 'absolute', 
+                            bottom: '12px', 
+                            right: '12px', 
+                            padding: '6px 12px', 
+                            backgroundColor: 'rgba(255,255,255,0.6)', 
+                            backdropFilter: 'blur(10px)',
+                            borderRadius: '8px',
+                            fontSize: '9px',
+                            fontWeight: '800',
+                            color: 'rgba(0,0,0,0.4)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            zIndex: 1000,
+                            pointerEvents: 'none',
+                            border: '1px solid rgba(0,0,0,0.03)',
+                            fontFamily: 'Inter, sans-serif',
+                            textTransform: 'lowercase'
+                          }}>
+                            <span>Made with</span>
+                            <span style={{ fontWeight: '900', color: 'rgba(0,0,0,0.6)' }}>kreavia.ai</span>
+                          </div>
+                        )}
+                    </div>
+
+                   <div style={{ position: 'absolute', bottom: '40px', display: 'flex', gap: '12px', zIndex: 100 }}>
+                      <button 
+                        onClick={() => {
+                          const el = document.getElementById('editor-preview-canvas');
+                          if (el) {
+                            if (el.style.width === '360px') {
+                              el.style.width = '450px';
+                              el.style.height = '562px';
+                            } else {
+                              el.style.width = '360px';
+                              el.style.height = '640px';
+                            }
+                          }
+                        }}
+                        style={{ padding: '12px 20px', borderRadius: '12px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', fontSize: '10px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
+                      >
+                         <Smartphone size={14} /> Toggle Mobile View
                       </button>
                       <button 
                         onClick={() => {
-                           setEditingTemplate(template);
-                           setTimeout(handleDownloadJPG, 500);
+                          const newTemplate = { ...editingTemplate, id: 'copy_' + Date.now(), name: editingTemplate.name + ' (Copy)' };
+                          const currentTemplates = [...templates];
+                          const index = currentTemplates.findIndex(t => t.id === editingTemplate.id);
+                          if (index !== -1) {
+                            currentTemplates.splice(index + 1, 0, newTemplate);
+                            setTemplates(currentTemplates);
+                          }
+                          setEditingTemplate(newTemplate);
+                          setTimeout(async () => {
+                            const stateToSave = {
+                              localBrandData,
+                              localText,
+                              subHeadline,
+                              badgeText,
+                              extraBody,
+                              canvasElements
+                            };
+                            await saveTemplateState(newTemplate.id, stateToSave);
+                          }, 500);
                         }}
-                        className="btn btn-ghost text-white/60 hover:text-white text-[10px] font-black uppercase tracking-widest w-2/3 flex gap-2 items-center justify-center"
+                        style={{ padding: '12px 20px', borderRadius: '12px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', fontSize: '10px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
                       >
-                         <Download size={14} /> Quick Export
+                         <Copy size={14} /> Duplicate View
                       </button>
                    </div>
                 </div>
-                <div className="p-6 bg-surface border-t border-light/50 flex justify-between items-center group-hover:bg-accent/5 transition-colors">
-                   <div className="flex flex-col">
-                      <span className="text-[11px] font-black uppercase tracking-widest text-primary truncate max-w-[140px]">{template.title}</span>
-                      <span className="text-[9px] font-bold uppercase tracking-widest text-accent mt-1 opacity-60">{template.type}</span>
-                   </div>
-                   <div className="w-10 h-10 rounded-xl bg-white shadow-inner flex items-center justify-center text-accent border border-light/30">
-                      {template.type === 'instagram' ? <Layout size={16} /> : <Phone size={16} />}
-                   </div>
-                </div>
-             </motion.div>
-         )) : (
-            <div className="col-span-full py-20 text-center flex flex-col items-center gap-6">
-               <div className="w-20 h-20 rounded-full bg-accent/10 flex items-center justify-center text-accent">
-                 <Layout size={40} />
-               </div>
-               <div className="max-w-md">
-                 <h3 className="text-2xl font-headline font-bold mb-2">No templates found</h3>
-                 <p className="text-muted">Try adjusting your filters or complete the onboarding to generate custom templates.</p>
-               </div>
-            </div>
-         )}
-       </div>
 
-       {/* Editor Modal */}
-       {createPortal(
-         <AnimatePresence>
-           {editingTemplate && (
-             <motion.div 
-               initial={{ opacity: 0 }}
-               animate={{ opacity: 1 }}
-               exit={{ opacity: 0 }}
-               className="fixed inset-0 z-[200] flex items-center justify-center p-0 md:p-10 bg-black/90 backdrop-blur-xl"
-             >
-              <motion.div 
-                initial={{ opacity: 0, y: 50, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 20, scale: 0.95 }}
-                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                className="w-full h-full xl:max-w-[1500px] xl:max-h-[900px] bg-secondary border border-light rounded-none md:rounded-3xl flex flex-col md:flex-row overflow-hidden shadow-2xl relative"
-              >
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
+      {/* Share Modal */}
+      <AnimatePresence>
+        {showShareModal && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 999999, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(10px)' }}
+            onClick={(e) => { if (e.target === e.currentTarget) setShowShareModal(false); }}
+          >
+            <motion.div 
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.95 }}
+              style={{ width: '100%', maxWidth: '800px', backgroundColor: '#1a1a1a', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', overflow: 'hidden', boxShadow: '0 40px 100px rgba(0,0,0,0.8)' }}
+            >
+              <div style={{ flex: 1, backgroundColor: '#111', padding: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid rgba(255,255,255,0.05)' }}>
+                 <div style={{ width: '100%', maxWidth: '280px', aspectRatio: '4/5', backgroundColor: 'white', borderRadius: '12px', overflow: 'hidden', pointerEvents: 'none', zoom: 0.7 }}>
+                    <TemplateRenderer 
+                      type={editingTemplate.type} 
+                      brandData={localBrandData} 
+                      text={localText} 
+                      subHeadline={subHeadline}
+                      badgeText={badgeText}
+                      extraBody={extraBody}
+                    />
+                 </div>
+              </div>
+              <div style={{ flex: 1.5, padding: '40px', display: 'flex', flexDirection: 'column' }}>
+                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                    <h3 style={{ fontSize: '18px', fontWeight: '900', color: 'white', letterSpacing: '0.05em' }}>Post to Instagram</h3>
+                    <button onClick={() => setShowShareModal(false)} style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: 'none', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', cursor: 'pointer' }}>
+                       <X size={16} />
+                    </button>
+                 </div>
                  
-                 {/* Left Sidebar */}
-                 <div className="w-16 md:w-20 lg:w-[280px] border-r border-light bg-surface flex flex-col shrink-0 z-20 pt-16 md:pt-0">
-                    <div className="h-[80px] hidden md:flex border-b border-light items-center justify-center lg:justify-start px-0 lg:px-8 shrink-0">
-                       <span className="hidden lg:block font-headline text-2xl font-bold text-primary">Vogue Assets</span>
-                    </div>
-
-                    <div className="flex-1 overflow-y-auto py-8">
-                       <div className="flex flex-col gap-4 px-2 lg:px-4">
-                          {[
-                            { id: 'typography', icon: <Type size={22} />, label: 'Typography' },
-                            { id: 'media', icon: <ImageIcon size={22} />, label: 'Media Library' },
-                            { id: 'shapes', icon: <Shapes size={22} />, label: 'Geometric elements' },
-                            { id: 'palette', icon: <Palette size={22} />, label: 'Brand Palette' },
-                          ].map((item) => (
-                             <button 
-                                key={item.id} 
-                                onClick={() => setActiveTab(item.id)}
-                                className={`flex flex-col lg:flex-row items-center gap-1 lg:gap-5 p-5 rounded-2xl transition-all border ${
-                                   activeTab === item.id 
-                                   ? 'bg-accent/10 border-accent text-accent shadow-sm' 
-                                   : 'bg-transparent border-transparent hover:bg-black/5 text-primary hover:border-light'
-                                } w-full text-center lg:text-left group`}
-                             >
-                                <div className={`${activeTab === item.id ? 'scale-110' : 'group-hover:scale-110'} transition-transform`}>{item.icon}</div>
-                                <span className="font-black text-[10px] lg:text-[11px] uppercase tracking-widest mt-1 lg:mt-0 opacity-70 lg:opacity-100">{item.label}</span>
-                             </button>
-                          ))}
-                          
-                          <div className="mt-10 border-t border-light pt-10">
-                             <button 
-                                onClick={handleGenerateBackground}
-                                disabled={isGenerating}
-                                className={`flex flex-col lg:flex-row items-center gap-5 p-6 rounded-3xl border transition-all w-full text-center lg:text-left ${
-                                   isGenerating ? 'bg-accent/5 border-accent/20 cursor-not-allowed shadow-inner' : 'bg-accent/10 border-accent/20 hover:bg-accent/20 text-accent group shadow-md'
-                                }`}
-                             >
-                                {isGenerating ? <Loader2 size={28} className="animate-spin text-accent" /> : <Wand2 size={28} className="group-hover:rotate-12 transition-transform" />}
-                                <div className="flex flex-col text-left">
-                                   <span className="font-black text-[11px] uppercase tracking-widest">{isGenerating ? 'Dreaming...' : 'AI Essence'}</span>
-                                   <span className="text-[10px] opacity-70 hidden lg:block font-medium mt-1">Generate magic background</span>
-                                </div>
-                             </button>
-                          </div>
-                       </div>
-                    </div>
-                 </div>
-
-                 {/* Center Canvas Area */}
-                 <div className="flex-1 bg-highlight/50 flex flex-col relative overflow-hidden">
-                    <div className="absolute top-0 inset-x-0 h-[80px] flex items-center justify-between px-10 z-20 pointer-events-none">
-                       <div className="pointer-events-auto mt-10">
-                          <span className="font-black text-[10px] tracking-widest uppercase text-muted bg-surface/80 px-4 py-2 rounded-full border border-light backdrop-blur-xl shadow-sm">Cloud Synced</span>
-                       </div>
-                    </div>
-
-                    <div className="flex-1 flex items-center justify-center p-10 lg:p-20 relative overflow-auto pt-24 md:pt-10">
-                       <div id="template-canvas" className="relative w-full max-w-[50vh] lg:max-w-[70vh] aspect-[4/5] bg-white shadow-2xl border border-light group overflow-hidden rounded-xl">
-                         <AnimatePresence>
-                           {isGenerating && (
-                             <motion.div 
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                className="absolute inset-0 z-30 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center gap-6"
-                             >
-                                <Loader2 className="w-16 h-16 text-accent animate-spin" />
-                                <span className="text-secondary font-black text-[12px] tracking-[0.3em] uppercase animate-pulse">Capturing Infinite Essence...</span>
-                             </motion.div>
-                           )}
-                         </AnimatePresence>
-
-                         <div className="w-full h-full relative">
-                            <TemplateRenderer 
-                                type={editingTemplate.type} 
-                                brandData={localBrandData} 
-                                text={localText} 
-                            />
-                         </div>
-                       </div>
-                    </div>
-                 </div>
-
-                 {/* Right Sidebar */}
-                 <div className="hidden md:flex w-[340px] border-l border-light bg-surface flex-col shrink-0 z-20">
-                     <div className="h-[80px] border-b border-light flex items-center justify-between px-8 shrink-0 gap-4">
-                        <div className="flex-1 flex gap-2">
-                           <button onClick={handleDownloadJPG} className="btn btn-primary h-12 flex-1 text-[10px] font-black uppercase tracking-widest shadow-glow flex items-center justify-center gap-2 text-secondary px-2">
-                              <Download size={14} /> JPG
-                           </button>
-                           <button 
-                              onClick={(e) => {
-                                 const btn = e.currentTarget;
-                                 const originalContent = btn.innerHTML;
-                                 btn.innerHTML = '<span class="animate-pulse flex items-center gap-2 text-[9px]"><svg class="animate-spin h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> SYNCING...</span>';
-                                 setTimeout(() => {
-                                    btn.innerHTML = originalContent;
-                                    window.open('https://www.canva.com/', '_blank');
-                                 }, 1500);
-                              }}
-                              className="btn h-12 flex-1 text-[10px] font-black uppercase tracking-widest shadow-md flex items-center justify-center gap-2 px-2 hover:opacity-90 transition-opacity"
-                              style={{ backgroundColor: '#00C4CC', color: '#FFFFFF', border: 'none' }}
-                           >
-                              <Sparkles size={14} /> Canva
-                           </button>
-                        </div>
-                        <button onClick={() => setEditingTemplate(null)} className="p-2.5 text-muted hover:text-primary rounded-2xl hover:bg-black/5 transition-colors flex-shrink-0 border border-transparent hover:border-light">
-                           <X size={24} />
-                        </button>
-                     </div>
-                    <div className="flex-1 overflow-y-auto p-8 flex flex-col gap-10 custom-scrollbar">
-                       {activeTab === 'typography' && (
-                          <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-right-4 duration-300">
-                             <h4 className="text-[11px] font-black uppercase tracking-widest text-muted">Typography Settings</h4>
-                             <div className="flex flex-col gap-3">
-                                <label className="text-[10px] uppercase tracking-widest font-black text-muted/60 ml-1">Font Family</label>
-                                <select 
-                                   value={localBrandData.typography?.headline || 'Playfair Display'}
-                                   onChange={(e) => setLocalBrandData({...localBrandData, typography: {...localBrandData.typography, headline: e.target.value}})}
-                                   className="input h-12 text-sm bg-secondary border-light text-primary py-0 w-full focus:border-accent font-bold shadow-sm"
-                                >
-                                   {['Playfair Display', 'Inter', 'Satoshi', 'Outfit', 'Montserrat', 'Space Grotesk'].map(f => <option key={f} value={f}>{f}</option>)}
-                                </select>
-                             </div>
-                             <div className="flex flex-col gap-3">
-                                <label className="text-[10px] uppercase tracking-widest font-black text-muted/60 ml-1">Font Color</label>
-                                <label className="flex items-center gap-4 bg-secondary border border-light rounded-2xl p-4 cursor-pointer hover:border-accent transition-all shadow-sm">
-                                   <input 
-                                     type="color" 
-                                     value={localBrandData.typography?.color || localBrandData.colors?.primary || '#1A1A1A'}
-                                     onChange={(e) => setLocalBrandData({...localBrandData, typography: {...localBrandData.typography, color: e.target.value}})}
-                                     className="sr-only"
-                                   />
-                                   <div className="w-10 h-10 rounded-xl shadow-inner border border-black/10 transition-transform hover:scale-105" style={{ backgroundColor: localBrandData.typography?.color || localBrandData.colors?.primary || '#1A1A1A' }}></div>
-                                   <div className="flex flex-col">
-                                      <span className="text-xs font-black uppercase text-primary mb-1">Text Color Picker</span>
-                                      <span className="text-[10px] font-mono text-muted">{localBrandData.typography?.color || localBrandData.colors?.primary || '#1A1A1A'}</span>
-                                   </div>
-                                </label>
-                             </div>
-                             <div className="flex flex-col gap-3">
-                                <label className="text-[10px] uppercase tracking-widest font-black text-muted/60 ml-1">Content</label>
-                                <div className="flex items-start bg-secondary border border-light rounded-xl overflow-hidden focus-within:border-accent shadow-sm">
-                                   <textarea 
-                                     value={localText}
-                                     onChange={(e) => setLocalText(e.target.value)}
-                                     rows={4}
-                                     className="w-full bg-transparent border-none text-primary text-sm px-4 py-3 outline-none font-bold resize-none custom-scrollbar" 
-                                   />
-                                </div>
-                             </div>
-                          </div>
-                       )}
-
-                       {activeTab === 'media' && (
-                          <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-right-4 duration-300">
-                             <h4 className="text-[11px] font-black uppercase tracking-widest text-muted">Media Library</h4>
-                             <div className="flex flex-col gap-3">
-                                 <label className="text-[10px] uppercase tracking-widest font-black text-muted/60 ml-1">Upload Picture</label>
-                                 <input type="file" onChange={handleImageUpload} className="hidden" id="editor-image-upload" accept="image/*" />
-                                 <label htmlFor="editor-image-upload" className="flex flex-col items-center justify-center gap-4 p-10 rounded-2xl border border-dashed border-light hover:border-accent cursor-pointer transition-all bg-secondary/50 hover:bg-white group">
-                                    <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center text-accent group-hover:scale-110 transition-transform">
-                                       <ImageIcon size={24} />
-                                    </div>
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-muted group-hover:text-primary">Upload Picture</span>
-                                </label>
-                             </div>
-                             
-                             <div className="p-5 rounded-2xl bg-accent/5 border border-accent/10 shadow-sm">
-                                <div className="flex items-center gap-3 mb-3 text-accent">
-                                   <Sparkles size={18} />
-                                   <span className="text-[11px] font-black uppercase tracking-widest">AI Backgrounds</span>
-                                </div>
-                                <p className="text-[10px] text-muted leading-relaxed font-medium">Use the <strong>AI Essence</strong> button in the left sidebar to generate a unique backdrop.</p>
-                             </div>
-                          </div>
-                       )}
-
-                       {activeTab === 'palette' && (
-                          <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-right-4 duration-300">
-                             <h4 className="text-[11px] font-black uppercase tracking-widest text-muted">Brand Palette</h4>
-                             <div className="flex flex-col gap-4">
-                               <label className="text-[10px] uppercase tracking-widest font-black text-muted/60 ml-1">Template Background</label>
-                               <div className="grid grid-cols-2 gap-3">
-                                 {['primary', 'secondary', 'accent', 'highlight'].map((colorKey) => {
-                                   const activeBrand = brandData || DEFAULT_BRAND;
-                                   const colorValue = activeBrand.colors?.[colorKey];
-                                   if (!colorValue) return null;
-                                   const isSelected = localBrandData.colors?.backgroundOverride === colorValue;
-                                   
-                                   return (
-                                     <button 
-                                       key={colorKey}
-                                       onClick={() => setLocalBrandData({...localBrandData, colors: {...localBrandData.colors, backgroundOverride: colorValue}})}
-                                       className={`flex items-center gap-3 p-3 bg-secondary rounded-2xl border transition-all ${isSelected ? 'border-accent shadow-glow scale-[1.02]' : 'border-light hover:border-muted'}`}
-                                     >
-                                       <div className="w-8 h-8 rounded-full shadow-inner border border-black/10 shrink-0 flex items-center justify-center" style={{ backgroundColor: colorValue }}>
-                                         {isSelected && <Sparkles size={12} className="text-white mix-blend-difference" />}
-                                       </div>
-                                       <div className="flex flex-col text-left overflow-hidden">
-                                         <span className="text-[10px] font-black uppercase text-primary truncate">{colorKey}</span>
-                                         <span className="text-[8px] font-mono text-muted uppercase">{colorValue}</span>
-                                       </div>
-                                     </button>
-                                   );
-                                 })}
-                               </div>
-                             </div>
-
-                             <div className="flex flex-col gap-4">
-                                <label className="text-[10px] uppercase tracking-widest font-black text-muted/60 ml-1">Quick Aesthetics</label>
-                                <div className="grid grid-cols-2 gap-3">
-                                   <button onClick={() => setLocalBrandData({...localBrandData, colors: {...localBrandData.colors, primary: localBrandData.colors?.highlight || '#F5F5F7', highlight: localBrandData.colors?.primary || '#1A1A1A'}})} className="px-4 py-3 rounded-xl bg-secondary border border-light text-[10px] font-black uppercase tracking-widest hover:border-accent transition-all shadow-sm">Invert Focus</button>
-                                   <button onClick={() => setLocalBrandData({...localBrandData, colors: {...localBrandData.colors, primary: '#000000', accent: '#000000', highlight: '#F1F1F1', secondary: '#FFFFFF'}})} className="px-4 py-3 rounded-xl bg-secondary border border-light text-[10px] font-black uppercase tracking-widest hover:border-accent transition-all shadow-sm">Minimalist</button>
-                                   <button onClick={() => { setLocalBrandData(brandData); setLocalText(editingTemplate.text); }} className="px-4 py-3 rounded-xl bg-secondary border border-light text-[10px] font-black uppercase tracking-widest hover:border-accent transition-all col-span-2 shadow-sm">Restore Brand Sync</button>
-                                </div>
-                             </div>
-                          </div>
-                       )}
-
-                       {activeTab === 'shapes' && (
-                          <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-right-4 duration-300">
-                             <div className="flex justify-between items-center">
-                               <h4 className="text-[11px] font-black uppercase tracking-widest text-muted">Geometric Elements</h4>
-                               <button 
-                                 onClick={() => {
-                                   const isCircle = Math.random() > 0.5;
-                                   const newShape = {
-                                     type: isCircle ? 'circle' : 'square',
-                                     size: Math.floor(Math.random() * 300) + 100,
-                                     x: Math.floor(Math.random() * 100),
-                                     y: Math.floor(Math.random() * 100),
-                                     rotation: Math.floor(Math.random() * 360),
-                                     opacity: (Math.floor(Math.random() * 15) + 5) / 100,
-                                     blur: Math.floor(Math.random() * 60)
-                                   };
-                                   setLocalBrandData({...localBrandData, shapes: [...(localBrandData.shapes || []), newShape]});
-                                 }}
-                                 className="text-[9px] font-black text-white bg-accent px-3 py-1.5 rounded-lg uppercase tracking-widest hover:scale-105 transition-transform shadow-glow flex items-center gap-1.5"
-                               >
-                                 <Sparkles size={12} /> AI Generate
-                               </button>
-                             </div>
-                             
-                             <div className="grid grid-cols-2 gap-4">
-                                {[
-                                   { type: 'circle', size: 150, opacity: 0.1, blur: 40, x: 20, y: 20 },
-                                   { type: 'circle', size: 300, opacity: 0.05, blur: 80, x: 80, y: 80 },
-                                   { type: 'square', size: 120, opacity: 0.08, rotation: 45, x: 15, y: 85 },
-                                   { type: 'square', size: 250, opacity: 0.04, rotation: 15, x: 85, y: 15 }
-                                ].map((shape, idx) => (
-                                   <div 
-                                      key={idx} 
-                                      onClick={() => setLocalBrandData({...localBrandData, shapes: [...(localBrandData.shapes || []), shape]})}
-                                      className="aspect-square rounded-2xl border border-light bg-secondary flex flex-col items-center justify-center text-muted hover:border-accent hover:text-accent hover:bg-accent/5 cursor-pointer transition-all shadow-sm group"
-                                   >
-                                      <div className="w-10 h-10 border-2 border-current opacity-50 group-hover:opacity-100 transition-opacity mb-2" style={{ borderRadius: shape.type === 'circle' ? '50%' : '0%', transform: `rotate(${shape.rotation || 0}deg)` }}></div>
-                                      <span className="text-[9px] font-black uppercase tracking-widest">{shape.type} {idx + 1}</span>
-                                   </div>
-                                ))}
-                             </div>
-
-                             {localBrandData.shapes?.length > 0 ? (
-                               <div className="flex flex-col gap-3 mt-4">
-                                  <div className="flex items-center justify-between">
-                                    <h5 className="text-[10px] uppercase font-bold text-muted/60">Active Elements</h5>
-                                    <button onClick={() => setLocalBrandData({...localBrandData, shapes: []})} className="text-[9px] font-bold text-muted hover:text-red-500 uppercase tracking-widest">Clear All</button>
-                                  </div>
-                                  <div className="flex flex-col gap-3">
-                                    {localBrandData.shapes.map((s, i) => (
-                                       <div key={i} className="flex flex-col gap-3 bg-secondary border border-light p-4 rounded-xl shadow-sm">
-                                          <div className="flex justify-between items-center mb-1">
-                                             <span className="capitalize text-[10px] font-black tracking-widest text-primary">{s.type} {i+1}</span>
-                                             <button onClick={() => {
-                                               const newShapes = [...localBrandData.shapes];
-                                               newShapes.splice(i, 1);
-                                               setLocalBrandData({...localBrandData, shapes: newShapes});
-                                             }} className="text-muted hover:text-red-500 transition-colors"><X size={14} /></button>
-                                          </div>
-                                          
-                                          <div className="flex items-center gap-3">
-                                             <span className="text-[9px] uppercase tracking-widest text-muted w-12">Scale</span>
-                                             <input type="range" min="50" max="800" value={s.size || 100} onChange={(e) => {
-                                               const newShapes = [...localBrandData.shapes];
-                                               newShapes[i] = { ...newShapes[i], size: parseInt(e.target.value) };
-                                               setLocalBrandData({...localBrandData, shapes: newShapes});
-                                             }} className="flex-1 accent-accent h-1 bg-light rounded-full appearance-none" />
-                                          </div>
-                                          
-                                          <div className="flex items-center gap-3">
-                                             <span className="text-[9px] uppercase tracking-widest text-muted w-12">Opacity</span>
-                                             <input type="range" min="1" max="100" value={(s.opacity || 0.2) * 100} onChange={(e) => {
-                                               const newShapes = [...localBrandData.shapes];
-                                               newShapes[i] = { ...newShapes[i], opacity: parseInt(e.target.value) / 100 };
-                                               setLocalBrandData({...localBrandData, shapes: newShapes});
-                                             }} className="flex-1 accent-accent h-1 bg-light rounded-full appearance-none" />
-                                          </div>
-                                          
-                                          <div className="flex gap-4">
-                                             <div className="flex items-center gap-2 flex-1">
-                                               <span className="text-[9px] uppercase tracking-widest text-muted w-4">X</span>
-                                               <input type="range" min="-50" max="150" value={s.x || 0} onChange={(e) => {
-                                                 const newShapes = [...localBrandData.shapes];
-                                                 newShapes[i] = { ...newShapes[i], x: parseInt(e.target.value) };
-                                                 setLocalBrandData({...localBrandData, shapes: newShapes});
-                                               }} className="flex-1 accent-accent h-1 bg-light rounded-full appearance-none" />
-                                             </div>
-                                             <div className="flex items-center gap-2 flex-1">
-                                               <span className="text-[9px] uppercase tracking-widest text-muted w-4">Y</span>
-                                               <input type="range" min="-50" max="150" value={s.y || 0} onChange={(e) => {
-                                                 const newShapes = [...localBrandData.shapes];
-                                                 newShapes[i] = { ...newShapes[i], y: parseInt(e.target.value) };
-                                                 setLocalBrandData({...localBrandData, shapes: newShapes});
-                                               }} className="flex-1 accent-accent h-1 bg-light rounded-full appearance-none" />
-                                             </div>
-                                          </div>
-
-                                          <div className="flex items-center gap-3 mt-1 pointer-events-auto">
-                                             <span className="text-[9px] uppercase tracking-widest text-muted w-12">Color</span>
-                                             <div className="flex items-center gap-2">
-                                               {['primary', 'secondary', 'accent', 'highlight'].map(cKey => {
-                                                  const cVal = localBrandData.colors?.[cKey];
-                                                  if (!cVal) return null;
-                                                  return (
-                                                    <button
-                                                      key={cKey}
-                                                      onClick={() => {
-                                                         const newShapes = [...localBrandData.shapes];
-                                                         newShapes[i] = { ...newShapes[i], color: cVal };
-                                                         setLocalBrandData({...localBrandData, shapes: newShapes});
-                                                      }}
-                                                      className={`w-6 h-6 rounded-full border border-black/10 transition-transform hover:scale-110 ${s.color === cVal ? 'ring-2 ring-accent ring-offset-1 ring-offset-secondary' : ''}`}
-                                                      style={{ backgroundColor: cVal }}
-                                                    />
-                                                  );
-                                               })}
-                                               <div className="h-4 w-px bg-light mx-1"></div>
-                                               <label className="w-6 h-6 rounded-full border border-light cursor-pointer overflow-hidden relative group">
-                                                  <div className="absolute inset-0 flex items-center justify-center bg-white group-hover:bg-light transition-colors pointer-events-none">
-                                                    <Palette size={10} className="text-muted" />
-                                                  </div>
-                                                  <input 
-                                                    type="color" 
-                                                    value={s.color || localBrandData.colors?.accent || '#000000'} 
-                                                    onChange={(e) => {
-                                                      const newShapes = [...localBrandData.shapes];
-                                                      newShapes[i] = { ...newShapes[i], color: e.target.value };
-                                                      setLocalBrandData({...localBrandData, shapes: newShapes});
-                                                    }} 
-                                                    className="opacity-0 absolute -inset-4 cursor-pointer w-[200%] h-[200%]" 
-                                                  />
-                                               </label>
-                                             </div>
-                                          </div>
-                                       </div>
-                                    ))}
-                                  </div>
-                               </div>
-                             ) : (
-                               <p className="text-[10px] text-muted text-center font-medium opacity-60 mt-4">Click a shape to add it to your template, or use AI Generate.</p>
-                             )}
-                          </div>
-                       )}
-                    </div>
-                 </div>
+                 <label style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', fontWeight: '800', textTransform: 'uppercase', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Sparkles size={14} color="#C6A96B" /> AI Generated Caption
+                 </label>
+                 
+                 <textarea 
+                    value={shareCaption}
+                    onChange={(e) => setShareCaption(e.target.value)}
+                    style={{ width: '100%', height: '180px', resize: 'none', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '16px', color: 'white', fontSize: '14px', lineHeight: 1.5, marginBottom: '16px', fontFamily: 'inherit' }}
+                 />
                  
                  <button 
-                   onClick={() => setEditingTemplate(null)} 
-                   className="absolute top-6 right-6 md:hidden z-[70] p-4 bg-surface/90 rounded-full text-primary backdrop-blur-xl shadow-2xl border border-light"
+                  onClick={copyShareCaption}
+                  style={{ width: '100%', padding: '16px', borderRadius: '12px', backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', fontSize: '12px', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', marginBottom: '32px' }}
                  >
-                   <X size={24} />
+                   {isCopying ? <Check size={16} color="#4ADE80" /> : <Copy size={16} />}
+                   {isCopying ? 'Copied to Clipboard!' : 'Copy Caption'}
                  </button>
-
-              </motion.div>
-             </motion.div>
-           )}
-         </AnimatePresence>,
-         document.body
-       )}
+                 
+                 <div style={{ marginTop: 'auto' }}>
+                    <div style={{ padding: '16px', backgroundColor: 'rgba(198, 169, 107, 0.05)', borderRadius: '12px', border: '1px solid rgba(198, 169, 107, 0.2)', marginBottom: '16px', display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                       <div style={{ marginTop: '2px' }}><Smartphone size={16} color="#C6A96B" /></div>
+                       <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)', lineHeight: 1.5, margin: 0 }}>
+                         <strong>Download the image then open Instagram app to post.</strong> Direct posting requires Instagram Business API approval.
+                       </p>
+                    </div>
+                    
+                    <button 
+                      onClick={() => {
+                        handleDownloadAdvanced('square_png');
+                        setTimeout(() => setShowShareModal(false), 500);
+                      }}
+                      style={{ width: '100%', padding: '16px', borderRadius: '12px', backgroundColor: '#C6A96B', color: '#1a1a1a', border: 'none', fontSize: '13px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.1em', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                    >
+                      <Download size={16} /> Download for Instagram
+                    </button>
+                 </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <UpgradeModal isOpen={showUpgradeModal} onClose={() => setShowUpgradeModal(false)} />
+      
+      <NudgeToast 
+        isVisible={showExportToast}
+        message="2 free exports remaining. Upgrade to Pro for unlimited exports without watermark."
+        onUpgrade={() => { setShowExportToast(false); setShowUpgradeModal(true); }}
+        onDismiss={() => setShowExportToast(false)}
+      />
     </div>
   );
 };

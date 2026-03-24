@@ -4,20 +4,23 @@ import {
   ArrowLeft, ArrowRight, Sparkles, Wand2, Dumbbell, Plane, Shirt, 
   Gamepad2, Briefcase, Coffee, Check, Cpu, Utensils, Home, Users, Laptop
 } from 'lucide-react';
+import { saveBrand, getBrandById } from '../utils/storage';
 import { motion, AnimatePresence } from 'framer-motion';
 import { buildBrandDNA } from '../ai/brandDNA';
 import { generateBrandKit } from '../ai/pipeline';
 import { generateHybridKit } from '../services/hybridAIService';
+import { useAuth } from '../context/AuthContext';
+import { getPlanStatus, getRemainingGenerations, incrementGenerationCount } from '../utils/planPermissions';
 
-const getPipelineSteps = (formData) => [
-  'You are a premium brand identity AI. The user has provided:',
-  `- Brand name: ${formData?.brandName || '{brand_name}'}`,
-  `- Instagram handle: ${formData?.instaHandle || '{insta_handle}'}`,
-  `- Niche: ${formData?.niche || '{niche}'}`,
-  `- Target audience: ${formData?.audience || '{audience}'}`,
-  `- Brand style: ${formData?.vibe || '{style}'}`,
-  `- Brand personality sliders: Professional ${Math.round(formData?.professionalLevel / 10) || '{p}'}/10, Minimal ${Math.round(formData?.minimalLevel / 10) || '{m}'}/10, Luxury ${Math.round(formData?.luxuryLevel / 10) || '{l}'}/10`,
-  `- Brief: ${formData?.brief || '{brief}'}`,
+const getPipelineSteps = () => [
+  'Forging Brand Identity DNA',
+  'Synthesizing Chromatic Palette',
+  'Iterating Logo Manifestations',
+  'Curating Typographic Pairings',
+  'Architecting Social Templates',
+  'Generating Viral Content Hooks',
+  'Building Brand Narratives',
+  'Visualizing Creative Assets'
 ];
 
 const LoadingScreen = ({ currentStep, currentLabel, formData }) => {
@@ -69,6 +72,7 @@ const LoadingScreen = ({ currentStep, currentLabel, formData }) => {
 
 
 const OnboardingPage = () => {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -92,38 +96,76 @@ const OnboardingPage = () => {
   const handlePrev = () => setStep(s => Math.max(s - 1, 1));
   
   const handleGenerate = async () => {
-    const isPro = localStorage.getItem('kreavia_pro_user') === 'true';
-    const count = parseInt(localStorage.getItem('kreavia_generation_count') || '0', 10);
-    const limit = isPro ? 10 : 1;
+    const isPro = getPlanStatus().maxGenerationsPerMonth === Infinity;
+    const isTestAccount = user?.email === 'cloud331988@gmail.com';
+    const remaining = getRemainingGenerations();
 
-    if (count >= limit) {
-      alert(`Generation limit reached! You have used ${count}/${limit} generations for your current plan. Please upgrade to create more brands.`);
+    if (remaining <= 0 && !isTestAccount) {
+      alert(`Generation limit reached for your current plan. Please upgrade to Pro to create more brands and unlock unlimited generations.`);
       return;
     }
 
     setLoading(true);
     setPipelineStep(0);
     try {
-      localStorage.setItem('kreavia_generation_count', (count + 1).toString());
+      incrementGenerationCount();
       
       const dna = buildBrandDNA(formData);
       // Store Brand DNA in sessionStorage so BrandKitPage can use it
       sessionStorage.setItem('brandDNA', JSON.stringify(dna));
 
-      // Execute the full hybrid pipeline
+      // 2. Execute a minimalist core generation (Fast, Reliable)
+      console.log('[Onboarding] Phase 1: Core Generation...');
       const result = await generateBrandKit(dna, (stepIndex, label) => {
         setPipelineStep(stepIndex);
         setPipelineLabel(label);
       });
+      console.log('[Onboarding] Core Generation Success:', result);
 
-      // Execute phase 2: Hybrid Content Generation (with its own steps 6 and 7)
-      const hybridResult = await generateHybridKit(dna, (step, msg) => {
-          setPipelineStep(5 + step); // Map hybrid step 1, 2 to pipeline step 6, 7
-          setPipelineLabel(msg);
-      });
+      // IMMEDIATE SAVE: Store the core kit right now before anything else can fail
+      const initialKit = {
+        id: crypto.randomUUID(),
+        createdAt: new Date().toISOString(),
+        ...result,
+        // Guarantee critical fields even if pipeline was partially incomplete
+        brandArchetype: result.brandArchetype || dna.brand_personality || 'The Visionary',
+        logos: (result.logos && result.logos.length > 0) ? result.logos : [
+           { url: `https://placehold.co/400x400/1A1A1A/C6A96B?text=${(dna.brand_name || 'B')[0].toUpperCase()}&font=playfair` }
+        ],
+        hybridContent: [] // Placeholder
+      };
 
-      // Store the full generated kit for the dashboard
-      sessionStorage.setItem('currentBrandKit', JSON.stringify({ ...result, hybridContent: hybridResult }));
+      try {
+        await saveBrand(initialKit);
+        sessionStorage.setItem('currentBrandKit', JSON.stringify(initialKit));
+        console.log('[Onboarding] Core Kit Persisted Successfully.');
+      } catch (saveErr) {
+        console.error('[Onboarding] Critical Storage Error:', saveErr);
+      }
+
+      // 3. Enhancement phase: Hybrid Content (Optional)
+      console.log('[Onboarding] Phase 2: Hybrid Enhancement...');
+      let hybridResult = [];
+      try {
+        hybridResult = await generateHybridKit(dna, (step, msg) => {
+            setPipelineStep(5 + step); 
+            setPipelineLabel(msg);
+        });
+        
+        // UPDATE SAVE: Merge hybrid results into the existing storage
+        const brand = await getBrandById(initialKit.id);
+        if (brand) {
+          brand.hybridContent = hybridResult;
+          await saveBrand(brand);
+          sessionStorage.setItem('currentBrandKit', JSON.stringify(brand));
+          console.log('[Onboarding] Hybrid Assets Merged Successfully.');
+        }
+      } catch (hybridErr) {
+        console.warn('[Onboarding] Hybrid generation failed, skipping secondary assets:', hybridErr);
+      }
+
+      // Set session flag for nudge
+      sessionStorage.setItem('brand_kit_just_generated', 'true');
 
       // Small pause so user sees "Done" before navigating
       setTimeout(() => navigate('/dashboard/brand-kit'), 800);
@@ -274,22 +316,36 @@ const OnboardingPage = () => {
 
                     {step === 3 && (
                       <div className="flex flex-col gap-4">
-                        {['Luxury', 'Minimal', 'Bold', 'Playful', 'Dark Aesthetic'].map(vibe => (
+                        {[
+                           { id: 'luxury', label: 'Luxury', font: 'Playfair Display', bg: '#0a192f', color: '#C6A96B', text: 'Elevate', weight: 600, rounded: '6px' },
+                           { id: 'minimal', label: 'Minimal', font: 'Inter', bg: '#ffffff', color: '#999999', text: 'Simple', weight: 400, rounded: '6px' },
+                           { id: 'bold', label: 'Bold', font: 'Montserrat', bg: '#000000', color: '#ffffff', text: 'IMPACT', weight: 900, rounded: '6px' },
+                           { id: 'playful', label: 'Playful', font: 'Poppins', bg: '#e9d5ff', color: '#1a1a1a', text: 'Hello!', weight: 600, rounded: '16px' },
+                           { id: 'dark aesthetic', label: 'Dark Aesthetic', font: 'Cormorant', bg: '#0a0a0a', color: '#c0c0c0', text: 'Noir', weight: 500, rounded: '6px' }
+                        ].map(vibe => (
                           <button 
-                            key={vibe}
-                            onClick={() => updateForm('vibe', vibe.toLowerCase())}
-                            className={`p-5 rounded-xl border flex items-center justify-between transition-all ${formData.vibe === vibe.toLowerCase() ? 'border-accent bg-accent/5' : 'border-light bg-card hover:border-muted'}`}
+                            key={vibe.id}
+                            onClick={() => updateForm('vibe', vibe.id)}
+                            className={`p-5 rounded-xl border flex items-center justify-between transition-all ${formData.vibe === vibe.id ? 'border-accent bg-accent/5 ring-1 ring-accent shadow-glow' : 'border-light bg-card hover:border-muted'}`}
                           >
-                            <span className={`font-ui text-lg ${formData.vibe === vibe.toLowerCase() ? 'text-accent font-medium' : 'text-primary'}`}>{vibe}</span>
-                            
-                            {/* Visual Feed Preview Placeholder Container */}
-                            <div className="flex gap-2">
-                               <div className={`w-12 h-16 rounded overflow-hidden opacity-80 border border-light/20 ${formData.vibe === vibe.toLowerCase() ? 'border-accent/50' : ''}`}>
-                                  <img src={`https://placehold.co/100x150/111/444?text=${vibe[0]}`} alt="" className="w-full h-full object-cover mix-blend-screen" />
-                               </div>
-                               <div className={`w-12 h-16 rounded overflow-hidden opacity-80 border border-light/20 ${formData.vibe === vibe.toLowerCase() ? 'border-accent/50' : ''}`}>
-                                  <img src={`https://placehold.co/100x150/111/555?text=${vibe[1]}`} alt="" className="w-full h-full object-cover mix-blend-screen" />
-                               </div>
+                            <span className={`font-ui text-lg ${formData.vibe === vibe.id ? 'text-accent font-medium' : 'text-primary'}`}>{vibe.label}</span>
+                            {/* Visual Font Card Preview */}
+                            <div 
+                              className={`w-[120px] h-[80px] shrink-0 flex items-center justify-center transition-all overflow-hidden ${formData.vibe === vibe.id ? 'border-2 border-accent shadow-md' : 'border border-light/20'}`}
+                              style={{ 
+                                backgroundColor: vibe.bg, 
+                                borderRadius: vibe.rounded || '4px'
+                              }}
+                            >
+                               <span style={{ 
+                                 fontFamily: vibe.font, 
+                                 color: vibe.color, 
+                                 fontWeight: vibe.weight || 400,
+                                 fontSize: '18px',
+                                 letterSpacing: vibe.id === 'bold' ? '2px' : 'normal'
+                               }}>
+                                 {vibe.text}
+                               </span>
                             </div>
                           </button>
                         ))}

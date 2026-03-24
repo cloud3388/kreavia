@@ -132,7 +132,8 @@ export const dnaToSummary = (dna) => {
 
 // ──────────────────────────────────────────
 // Generate a cache key from DNA (for palette/font caching)
-// ──────────────────────────────────────────
 export const dnaCacheKey = (dna) => {
-  return `${dna.niche}::${dna.style}::${dna.sliders.minimal_vs_bold.label}::${dna.sliders.luxury_vs_casual.label}`;
+  // Hash text fields to keep key length manageable but unique
+  const textSum = (dna.brand_name + dna.brief).replace(/\s+/g, '').slice(0, 30);
+  return `${textSum}::${dna.niche}::${dna.style}::${dna.audience}::${dna.sliders.professional_vs_fun.label}::${dna.sliders.minimal_vs_bold.label}::${dna.sliders.luxury_vs_casual.label}`;
 };

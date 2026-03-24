@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { User, CreditCard, Bell, Shield, LogOut, Palette, Type, Save, RotateCcw, Check, Sparkles } from 'lucide-react';
+import { User, CreditCard, Bell, Shield, LogOut, Palette, Type, Save, RotateCcw, Check, Sparkles, ExternalLink, RefreshCw, Crown } from 'lucide-react';
 import { generateBrandKit as generateBrandIdentity } from '../../ai/pipeline';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '../../context/AuthContext';
+import { getUserSubscription } from '../../services/userService';
+import { getRemainingGenerations } from '../../utils/planPermissions';
+import { useNavigate } from 'react-router-dom';
+import { getBrands, getActiveBrand, saveBrand } from '../../utils/storage';
 
 const SettingsPage = () => {
   const [brandData, setBrandData] = useState(null);
@@ -17,17 +22,32 @@ const SettingsPage = () => {
   });
   const [isSaving, setIsSaving] = useState(false);
   const [showSavedToast, setShowSavedToast] = useState(false);
+  
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [subscription, setSubscription] = useState(null);
+  const remainingGens = getRemainingGenerations();
+  
+  const [prefs, setPrefs] = useState({ email: true, marketing: false });
+
+  useEffect(() => {
+    if (user) {
+      getUserSubscription(user.id).then(({ data }) => setSubscription(data));
+    }
+  }, [user]);
 
   useEffect(() => {
     const fetchBrand = async () => {
-      const savedKit = sessionStorage.getItem('currentBrandKit');
-      let data = null;
+      let data = await getActiveBrand();
       
-      if (savedKit) {
-        try {
-          data = JSON.parse(savedKit);
-        } catch (err) {
-          console.error('Failed to parse brand kit:', err);
+      if (!data) {
+        const savedSession = sessionStorage.getItem('currentBrandKit');
+        if (savedSession) {
+          try {
+            data = JSON.parse(savedSession);
+          } catch (err) {
+            console.error('Failed to parse brand kit:', err);
+          }
         }
       }
 
@@ -41,7 +61,7 @@ const SettingsPage = () => {
           typography: { ...fallbackData.typography, ...data?.typography }
         };
         // Auto-initialize if it was missing
-        sessionStorage.setItem('currentBrandKit', JSON.stringify(data));
+        await saveBrand(data);
       }
 
       setBrandData(data);
@@ -56,12 +76,44 @@ const SettingsPage = () => {
     fetchBrand();
   }, []);
 
+  const updateBrandInStorage = async (updatedKit, snapshotSource = null) => {
+    // 1. Handle Version History push if there's a snapshot source
+    if (snapshotSource) {
+      const vHistory = updatedKit.versionHistory || [];
+      const vNumber = vHistory.length + 1;
+      
+      const snapshot = JSON.parse(JSON.stringify(snapshotSource));
+      delete snapshot.versionHistory;
+      
+      updatedKit.versionHistory = [
+        ...vHistory,
+        {
+          id: crypto.randomUUID(),
+          version: `v${vNumber}`,
+          createdAt: new Date().toISOString(),
+          data: snapshot
+        }
+      ];
+    }
+
+    // 2. Storage Persistence
+    await saveBrand(updatedKit);
+    sessionStorage.setItem('currentBrandKit', JSON.stringify(updatedKit));
+    window.dispatchEvent(new Event('kreavia_brands_updated'));
+  };
+
   const handleSave = () => {
     setIsSaving(true);
     
-    // Safety check: ensure we preserve existing brand properties
-    const currentKitJson = sessionStorage.getItem('currentBrandKit');
-    let currentKit = currentKitJson ? JSON.parse(currentKitJson) : (brandData || {});
+    const activeId = localStorage.getItem('kreavia_active_brand_id');
+    const rawBrands = localStorage.getItem('kreavia_user_brands');
+    const userBrands = rawBrands ? JSON.parse(rawBrands) : [];
+    
+    let currentKit = userBrands.find(b => b.id === activeId);
+    if (!currentKit) {
+       const currentKitJson = sessionStorage.getItem('currentBrandKit');
+       currentKit = currentKitJson ? JSON.parse(currentKitJson) : (brandData || {});
+    }
     
     const updatedKit = {
       ...currentKit,
@@ -77,7 +129,8 @@ const SettingsPage = () => {
       lastUpdated: new Date().toISOString()
     };
     
-    sessionStorage.setItem('currentBrandKit', JSON.stringify(updatedKit));
+    // Pass currentKit as the snapshot source to log the version history!
+    updateBrandInStorage(updatedKit, currentKit);
     
     setTimeout(() => {
       setIsSaving(false);
@@ -101,8 +154,15 @@ const SettingsPage = () => {
     setLocalColors(defaults);
     setLocalFonts(fontDefaults);
     
-    const currentKitJson = sessionStorage.getItem('currentBrandKit');
-    const currentKit = currentKitJson ? JSON.parse(currentKitJson) : {};
+    const activeId = localStorage.getItem('kreavia_active_brand_id');
+    const rawBrands = localStorage.getItem('kreavia_user_brands');
+    const userBrands = rawBrands ? JSON.parse(rawBrands) : [];
+    
+    let currentKit = userBrands.find(b => b.id === activeId);
+    if (!currentKit) {
+       const currentKitJson = sessionStorage.getItem('currentBrandKit');
+       currentKit = currentKitJson ? JSON.parse(currentKitJson) : (brandData || {});
+    }
     
     const updatedKit = {
       ...currentKit,
@@ -114,7 +174,9 @@ const SettingsPage = () => {
       },
       lastUpdated: new Date().toISOString()
     };
-    sessionStorage.setItem('currentBrandKit', JSON.stringify(updatedKit));
+    
+    updateBrandInStorage(updatedKit, currentKit);
+    
     setBrandData(updatedKit);
     setShowSavedToast(true);
     setTimeout(() => setShowSavedToast(false), 3000);
@@ -269,7 +331,7 @@ const SettingsPage = () => {
                    <input type="email" className="input bg-secondary border-light text-primary font-bold" defaultValue="alex@example.com" />
                  </div>
               </div>
-              <button className="btn btn-outline border-accent/20 text-accent font-bold self-start mt-2">Update Profile</button>
+              <button className="px-6 py-2.5 rounded-full border border-black/10 text-gray-800 font-bold hover:bg-gray-50 bg-white self-start mt-2 transition-colors shadow-sm">Update Profile</button>
            </div>
         </div>
       </section>
@@ -281,20 +343,78 @@ const SettingsPage = () => {
           Plan & Billing
         </h3>
         
-        <div className="glass-card p-10 border-none shadow-md flex flex-col md:flex-row justify-between items-center gap-8 bg-primary text-secondary relative overflow-hidden group">
-           <div className="absolute top-0 right-0 w-64 h-64 bg-accent/10 blur-3xl rounded-full -mr-32 -mt-32 group-hover:bg-accent/20 transition-colors"></div>
-           <div className="relative z-10">
-             <div className="flex items-center gap-4 mb-3">
-                <span className="text-3xl font-headline text-secondary font-bold">Creator Pro Plan</span>
-                <span className="px-3 py-1 rounded-full bg-accent text-primary text-[10px] font-black uppercase tracking-widest">Active</span>
+        {(!subscription || subscription.plan === 'free') ? (
+          /* FREE USER */
+          <div className="p-10 border border-light flex flex-col md:flex-row justify-between items-center gap-8 rounded-[2.5rem] bg-surface shadow-sm">
+             <div className="relative z-10 text-center md:text-left">
+               <div className="flex items-center justify-center md:justify-start gap-4 mb-3">
+                  <span className="text-3xl font-headline text-primary font-bold">Free Forever</span>
+                  <span className="px-3 py-1 rounded-full bg-light text-muted text-[10px] font-black uppercase tracking-widest">Free Plan</span>
+               </div>
+               <p className="text-muted text-sm font-medium">
+                 You have <span className="text-primary font-bold">{remainingGens} AI generations</span> remaining this month.
+               </p>
              </div>
-             <p className="opacity-70 text-sm font-medium">You have unlimited AI generations and full template access.</p>
-           </div>
-           
-           <div className="flex gap-4 w-full md:w-auto relative z-10">
-             <button className="btn bg-secondary text-primary px-8 py-3 font-bold shadow-lg hover:bg-white transition-colors">Manage Billing</button>
-           </div>
-        </div>
+             
+             <button 
+               onClick={() => navigate('/pricing')}
+               className="btn btn-primary px-10 py-4 rounded-full font-bold shadow-glow flex items-center gap-2"
+             >
+               <Crown size={18} /> Upgrade to Pro
+             </button>
+          </div>
+        ) : subscription.status === 'cancelled' ? (
+          /* CANCELLED USER */
+          <div className="p-10 border border-orange-200 shadow-xl flex flex-col md:flex-row justify-between items-center gap-8 rounded-[2.5rem] bg-orange-50/30 relative overflow-hidden group">
+             <div className="relative z-10 text-center md:text-left">
+               <div className="flex items-center justify-center md:justify-start gap-4 mb-3">
+                  <span className="text-3xl font-headline text-primary font-bold">Pro Studio</span>
+                  <span className="px-3 py-1 rounded-full bg-orange-100 text-orange-600 text-[10px] font-black uppercase tracking-widest border border-orange-200">
+                    Pro — Cancels on {new Date(subscription.renewal_date).toLocaleDateString()}
+                  </span>
+               </div>
+               <p className="text-muted text-sm font-medium max-w-md">
+                 Your Pro access continues until {new Date(subscription.renewal_date).toLocaleDateString()}. Resubscribe anytime to keep your Pro features.
+               </p>
+             </div>
+             
+             <button 
+                onClick={() => navigate('/pricing')}
+                className="btn bg-orange-500 text-white hover:bg-orange-600 px-10 py-4 rounded-full font-bold shadow-lg flex items-center gap-2 border-none"
+             >
+               <RefreshCw size={18} /> Resubscribe
+             </button>
+          </div>
+        ) : (
+          /* ACTIVE PRO USER */
+          <div className="p-10 border border-primary shadow-2xl flex flex-col md:flex-row justify-between items-center gap-8 rounded-[2.5rem] relative overflow-hidden group" style={{ background: '#0F0F0F', color: '#FFFFFF' }}>
+             <div className="absolute top-0 right-0 w-64 h-64 bg-accent/10 blur-3xl rounded-full -mr-32 -mt-32 group-hover:bg-accent/20 transition-colors"></div>
+             <div className="relative z-10 text-center md:text-left">
+               <div className="flex items-center justify-center md:justify-start gap-4 mb-3">
+                  <span className="text-3xl font-headline text-white font-bold">Pro Studio</span>
+                  <span className="px-3 py-1 rounded-full bg-accent text-[#0F0F0F] text-[10px] font-black uppercase tracking-widest">Active</span>
+               </div>
+               <div className="flex flex-col gap-1">
+                 <p className="opacity-70 text-sm font-medium text-white/80">
+                   Next billing date: <span className="text-white font-bold">{new Date(subscription.renewal_date || new Date().setDate(new Date().getDate() + 30)).toLocaleDateString()}</span>
+                 </p>
+                 <p className="opacity-70 text-xs font-bold text-accent uppercase tracking-wider">
+                   Amount: {subscription.plan === 'pro_yearly' ? '$171/year' : '$19/month'}
+                 </p>
+               </div>
+             </div>
+             
+             <div className="flex gap-4 w-full md:w-auto relative z-10">
+               <button 
+                 onClick={() => window.open('https://app.lemonsqueezy.com/billing', '_blank')} 
+                 className="bg-white text-black px-8 py-3 rounded-full font-bold shadow-lg transition-colors hover:bg-gray-200 flex items-center gap-2 border-none" 
+                 style={{ color: '#0F0F0F' }}
+               >
+                 Manage Subscription <ExternalLink size={16} />
+               </button>
+             </div>
+          </div>
+        )}
       </section>
 
       {/* Preferences Section */}
@@ -304,40 +424,46 @@ const SettingsPage = () => {
           Personal Preferences
         </h3>
         
-        <div className="glass-card flex flex-col border-none shadow-sm divide-y divide-light bg-surface overflow-hidden">
-           <div className="p-8 flex justify-between items-center hover:bg-black/[0.02] transition-colors cursor-pointer group">
+        <div className="glass-card flex flex-col border-none shadow-sm divide-y divide-black/5 bg-white overflow-hidden">
+           <div 
+             onClick={() => setPrefs(p => ({...p, email: !p.email}))}
+             className="p-8 flex justify-between items-center hover:bg-black/[0.02] transition-colors cursor-pointer group"
+           >
               <div>
-                <h4 className="font-headline text-lg font-bold text-primary group-hover:text-accent transition-colors">Email Notifications</h4>
-                <p className="text-muted text-sm mt-1 font-medium">Receive weekly content generation ideas in your inbox.</p>
+                <h4 className="font-headline text-lg font-bold text-gray-900">Email Notifications</h4>
+                <p className="text-gray-500 text-sm mt-1 font-medium">Receive weekly content generation ideas in your inbox.</p>
               </div>
-              <div className="w-14 h-7 bg-accent rounded-full relative cursor-pointer shadow-inner">
-                 <div className="w-5 h-5 bg-white rounded-full absolute top-1 right-1 shadow-md"></div>
+              <div className={`w-14 h-7 rounded-full relative cursor-pointer shadow-inner border border-black/5 transition-colors duration-300 ${prefs.email ? 'bg-emerald-500' : 'bg-gray-200'}`}>
+                 <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 shadow-md transition-all duration-300 ${prefs.email ? 'right-1' : 'left-1'}`}></div>
               </div>
            </div>
  
-           <div className="p-8 flex justify-between items-center hover:bg-black/[0.02] transition-colors cursor-pointer group">
+           <div 
+             onClick={() => setPrefs(p => ({...p, marketing: !p.marketing}))}
+             className="p-8 flex justify-between items-center hover:bg-black/[0.02] transition-colors cursor-pointer group"
+           >
               <div>
-                <h4 className="font-headline text-lg font-bold text-primary group-hover:text-accent transition-colors">Marketing Insights</h4>
-                <p className="text-muted text-sm mt-1 font-medium">Allow AI to scan your public social stats for better recommendations.</p>
+                <h4 className="font-headline text-lg font-bold text-gray-900">Marketing Insights</h4>
+                <p className="text-gray-500 text-sm mt-1 font-medium">Allow AI to scan your public social stats for better recommendations.</p>
               </div>
-              <div className="w-14 h-7 bg-accent rounded-full relative cursor-pointer shadow-inner">
-                 <div className="w-5 h-5 bg-white rounded-full absolute top-1 right-1 shadow-md"></div>
+              <div className={`w-14 h-7 rounded-full relative cursor-pointer shadow-inner border border-black/5 transition-colors duration-300 ${prefs.marketing ? 'bg-emerald-500' : 'bg-gray-200'}`}>
+                 <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 shadow-md transition-all duration-300 ${prefs.marketing ? 'right-1' : 'left-1'}`}></div>
               </div>
            </div>
            
            <div className="p-8 flex justify-between items-center hover:bg-black/[0.02] transition-colors cursor-pointer group">
               <div>
-                <h4 className="font-headline text-lg font-bold text-primary group-hover:text-accent transition-colors">Data Privacy</h4>
-                <p className="text-muted text-sm mt-1 font-medium">Manage exactly how your data is used for AI generation models.</p>
+                <h4 className="font-headline text-lg font-bold text-gray-900">Data Privacy</h4>
+                <p className="text-gray-500 text-sm mt-1 font-medium">Manage exactly how your data is used for AI generation models.</p>
               </div>
-              <Shield className="text-accent opacity-40 group-hover:opacity-100 transition-opacity" size={24} />
+              <Shield className="text-emerald-500 opacity-60 group-hover:opacity-100 transition-opacity" size={24} />
            </div>
         </div>
       </section>
 
       {/* Danger Zone */}
       <section className="flex flex-col gap-6 mt-8">
-         <button className="btn btn-outline text-red-400 border-red-400/30 hover:border-red-400 hover:text-red-300 self-start flex items-center gap-2 px-6 py-3">
+         <button className="px-6 py-3 rounded-xl border border-red-200 text-red-500 bg-white font-bold hover:bg-red-50 self-start flex items-center gap-2 transition-colors shadow-sm">
            <LogOut size={18} /> Sign Out of Kreavia.ai
          </button>
       </section>

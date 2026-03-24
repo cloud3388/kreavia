@@ -238,8 +238,10 @@ CREATE TABLE IF NOT EXISTS subscriptions (
   status            TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'paused', 'cancelled', 'past_due', 'trialing')),
   renewal_date      TIMESTAMPTZ,
   trial_ends_at     TIMESTAMPTZ,
-  payment_provider  TEXT CHECK (payment_provider IN ('stripe', 'razorpay', 'paypal')),
-  provider_sub_id   TEXT,   -- Stripe subscription ID e.g. sub_abc123
+  payment_provider  TEXT CHECK (payment_provider IN ('stripe', 'razorpay', 'paypal', 'lemonsqueezy')),
+  provider_sub_id   TEXT,   -- Stripe/Lemon Squeezy subscription ID e.g. sub_abc123
+  lemonsqueezy_order_id TEXT,
+  cancelled_at      TIMESTAMPTZ,
   created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
