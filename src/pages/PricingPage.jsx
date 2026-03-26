@@ -22,12 +22,12 @@ const PricingPage = () => {
         checkoutUrl.searchParams.set('checkout[custom][user_id]', user.id);
         window.open(checkoutUrl.toString(), '_blank');
       } else {
-        navigate('/signup');
+        navigate('/login', { state: { context: 'upgrade' } });
       }
     } else if (user) {
       navigate('/dashboard');
     } else {
-      navigate('/signup');
+      navigate('/login', { state: { context: 'upgrade' } });
     }
   };
 

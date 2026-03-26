@@ -24,6 +24,11 @@ export const supabase = isValidConfig
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null;
 
+console.log(`[Kreavia.ai] Supabase Initialized. Mock Mode: ${!supabase}`);
+if (!supabase) {
+  console.warn("MOCK MODE ACTIVE: To disable, set VITE_USE_MOCK_AUTH=false in .env and RESTART YOUR TERMINAL (Ctrl+C, then npm run dev).");
+}
+
 export const isMockMode = !supabase;
 
 

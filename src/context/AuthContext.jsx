@@ -71,8 +71,47 @@ export const AuthProvider = ({ children }) => {
     if (isMockMode) {
       return signIn('google-user@example.com', 'dummy');
     }
+    const redirectUrl = window.location.hostname === 'localhost' 
+      ? `${window.location.origin}/auth/callback` 
+      : 'https://kreavia.app/auth/callback';
+
     return await supabase.auth.signInWithOAuth({
       provider: 'google',
+      options: {
+        redirectTo: redirectUrl,
+      }
+    });
+  };
+
+  const signInWithMicrosoft = async () => {
+    if (isMockMode) {
+      return signIn('microsoft-user@example.com', 'dummy');
+    }
+    const redirectUrl = window.location.hostname === 'localhost' 
+      ? `${window.location.origin}/auth/callback` 
+      : 'https://kreavia.app/auth/callback';
+
+    return await supabase.auth.signInWithOAuth({
+      provider: 'azure',
+      options: {
+        redirectTo: redirectUrl,
+      }
+    });
+  };
+
+  const signInWithYahoo = async () => {
+    if (isMockMode) {
+      return signIn('yahoo-user@example.com', 'dummy');
+    }
+    const redirectUrl = window.location.hostname === 'localhost' 
+      ? `${window.location.origin}/auth/callback` 
+      : 'https://kreavia.app/auth/callback';
+
+    return await supabase.auth.signInWithOAuth({
+      provider: 'workos', // fallback as per config
+      options: {
+        redirectTo: redirectUrl,
+      }
     });
   };
 
@@ -83,6 +122,8 @@ export const AuthProvider = ({ children }) => {
     signIn,
     signOut,
     signInWithGoogle,
+    signInWithMicrosoft,
+    signInWithYahoo,
   };
 
   return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;

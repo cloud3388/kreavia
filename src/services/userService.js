@@ -49,3 +49,36 @@ export const getUserSubscription = async (userId) => {
   if (isMockMode) return { data: null, error: null };
   return supabase.from('subscriptions').select('*').eq('user_id', userId).single();
 };
+
+export const checkGenerationLimit = async (userId) => {
+  if (isMockMode) {
+     const used = parseInt(localStorage.getItem('kreavia_gen_count') || '0', 10);
+     return { used, remaining: Math.max(0, 3 - used) };
+  }
+  
+  // Get start of current month
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  
+  const { data, error } = await supabase
+    .from('ai_usage')
+    .select('credits_used')
+    .eq('user_id', userId)
+    .gte('created_at', startOfMonth);
+    
+  if (error) return { used: 0, remaining: 3 };
+  
+  const used = data.reduce((sum, record) => sum + (record.credits_used || 1), 0);
+  return { used, remaining: Math.max(0, 3 - used) };
+};
+
+export const recordGeneration = async (userId, type = 'brand_kit') => {
+  if (isMockMode) {
+     const used = parseInt(localStorage.getItem('kreavia_gen_count') || '0', 10);
+     localStorage.setItem('kreavia_gen_count', (used + 1).toString());
+     return { error: null };
+  }
+  return supabase.from('ai_usage').insert([
+    { user_id: userId, generation_type: type, credits_used: 1 }
+  ]);
+};

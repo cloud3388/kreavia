@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Palette, Type, Image as ImageIcon, CheckCircle, Sparkles, AlertCircle, Download, FileText, Share2, Check as CheckIcon, MoreVertical, Plus, Edit, Trash, Copy, Copy as CopyIcon, History, RotateCcw, Lock, Crown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import logoAsset from '../../assets/logo.png';
 import { generateBrandIdentity } from '../../services/brandAiService';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -21,6 +22,7 @@ import {
 
 const BrandKitPage = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [brandData, setBrandData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -472,6 +474,19 @@ const BrandKitPage = () => {
           onDismiss={() => sessionStorage.removeItem('brand_kit_just_generated')}
         />
       )}
+
+      {/* Greeting Section */}
+      <motion.div variants={itemVariants} className="flex flex-col mb-2">
+        <h1 className="font-headline text-3xl md:text-4xl text-primary font-bold">
+          {(() => {
+            const hour = new Date().getHours();
+            if (hour < 12) return 'Good morning';
+            if (hour < 17) return 'Good afternoon';
+            return 'Good evening';
+          })()}, {user?.user_metadata?.first_name || user?.user_metadata?.full_name?.split(' ')[0] || 'Creator'}
+        </h1>
+        <p className="text-muted text-sm mt-1">Here is a quick overview of your creative portfolio.</p>
+      </motion.div>
       
       {/* My Brands Section */}
       <div className="flex flex-col gap-4">
@@ -686,6 +701,9 @@ const BrandKitPage = () => {
             <Sparkles size={12} /> Brand Identity DNA
           </h3>
           <div className="text-5xl font-headline text-primary font-bold tracking-tight text-primary">{brandData?.brandArchetype || 'The Visionary'}</div>
+          <div className="mt-3 text-xs font-semibold text-muted bg-primary/5 inline-block px-3 py-1 rounded-full">
+            Created by {user?.user_metadata?.first_name || user?.user_metadata?.full_name?.split(' ')[0] || 'Creator'}
+          </div>
         </div>
         <div className="text-right relative z-10">
            <div className="text-muted text-[10px] font-bold uppercase tracking-[0.2em] mb-1">Brand Consistency</div>

@@ -41,6 +41,13 @@ const DashboardLayout = () => {
       localStorage.setItem('kreavia_account_created_at', new Date().toISOString());
     }
 
+    const welcomeMsg = sessionStorage.getItem('welcome_toast');
+    if (welcomeMsg) {
+      setToastMsg(welcomeMsg);
+      sessionStorage.removeItem('welcome_toast');
+      setTimeout(() => setToastMsg(''), 3000);
+    }
+
     return () => window.removeEventListener('kreavia_brands_updated', loadBrands);
   }, []);
 

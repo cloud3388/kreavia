@@ -1,7 +1,9 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import AuthCallbackPage from './pages/auth/AuthCallbackPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+import { isMockMode } from './lib/supabase';
 import MainLayout from './components/layout/MainLayout';
 import DashboardLayout from './components/layout/DashboardLayout';
 import LandingPage from './pages/LandingPage';
@@ -36,6 +38,11 @@ function App() {
     <Router>
       <AnalyticsTracker />
       <AuthProvider>
+        {isMockMode && (
+          <div className="fixed top-0 left-0 right-0 bg-red-600 text-white text-[10px] py-1 px-4 z-[9999] text-center font-bold uppercase tracking-widest">
+            Mock Auth Active — Restart Terminal to use Real Supabase
+          </div>
+        )}
         <Routes>
           {/* Public Routes */}
           <Route element={<MainLayout />}>
@@ -43,6 +50,7 @@ function App() {
             <Route path="/pricing" element={<PricingPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignUpPage />} />
+            <Route path="/auth/callback" element={<AuthCallbackPage />} />
             <Route 
               path="/onboarding" 
               element={

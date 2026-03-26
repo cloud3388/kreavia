@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { buildBrandDNA } from '../ai/brandDNA';
 import { generateStep1DNA, generateStep2Logo, generateStep3Content } from '../ai/pipeline';
 import { useAuth } from '../context/AuthContext';
-import { getRemainingGenerations, incrementGenerationCount } from '../utils/planPermissions';
+import { checkGenerationLimit, recordGeneration } from '../services/userService';
 
 const PIPELINE_STEPS = [
   'Building brand profile and color palette',
@@ -117,6 +117,36 @@ const LoadingScreen = ({ stepStatuses, onRetry }) => {
 };
 
 
+const GenerationLimitModal = ({ isOpen, onClose, onUpgrade }) => {
+  if (!isOpen) return null;
+  const now = new Date();
+  const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const resetDateString = nextMonth.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  const daysUntilReset = Math.ceil((nextMonth.getTime() - now.getTime()) / (1000 * 3600 * 24));
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+      <div className="bg-card w-full max-w-md rounded-2xl border border-light shadow-2xl overflow-hidden relative p-8 text-center animate-scale-in">
+        <button className="absolute top-4 right-4 text-muted hover:text-primary z-10" onClick={onClose}>✕</button>
+        <div className="w-16 h-16 bg-accent/10 rounded-full flex items-center justify-center mx-auto mb-6">
+          <Sparkles className="text-accent" size={32} />
+        </div>
+        <h3 className="text-2xl font-headline mb-4">Generation Limit Reached</h3>
+        <p className="text-muted mb-6">
+          You have used all 3 free generations this month. Your limit resets on {resetDateString} (<strong className="text-primary">{daysUntilReset} days</strong>).
+        </p>
+        <div className="bg-light/30 border border-light/50 rounded-xl p-4 mb-8">
+          <p className="font-medium text-sm">Upgrade to Pro for unlimited generations — from $14.25/month.</p>
+        </div>
+        <div className="flex gap-4">
+          <button className="btn btn-ghost flex-1 py-3" onClick={onClose}>Maybe Later</button>
+          <button className="btn btn-primary flex-1 py-3 shadow-glow" onClick={onUpgrade}>Upgrade to Pro</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const OnboardingPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -124,6 +154,7 @@ const OnboardingPage = () => {
   const [loading, setLoading] = useState(false);
   const [stepStatuses, setStepStatuses] = useState(['pending', 'pending', 'pending']);
   const [currentBrandKit, setCurrentBrandKit] = useState(null);
+  const [showLimitModal, setShowLimitModal] = useState(false);
   
   const [formData, setFormData] = useState({
     brandInputType: 'name', // 'name' or 'handle'
@@ -186,15 +217,20 @@ const OnboardingPage = () => {
 
   const handleGenerate = async () => {
     const isTestAccount = user?.email === 'cloud331988@gmail.com';
-    const remaining = getRemainingGenerations();
-    if (remaining <= 0 && !isTestAccount) {
-      alert('Generation limit reached. Please upgrade to Pro to create more brands.');
-      return;
-    }
+    const isPro = localStorage.getItem('kreavia_pro_user') === 'true';
 
     setLoading(true);
     setStepStatuses(['pending', 'pending', 'pending']);
-    incrementGenerationCount();
+
+    if (!isPro && !isTestAccount) {
+      const { remaining } = await checkGenerationLimit(user?.id);
+      if (remaining <= 0) {
+        setLoading(false);
+        setShowLimitModal(true);
+        return;
+      }
+      await recordGeneration(user?.id, 'brand_kit');
+    }
 
     const dna = buildBrandDNA(formData);
     sessionStorage.setItem('brandDNA', JSON.stringify(dna));
@@ -274,6 +310,16 @@ const OnboardingPage = () => {
 
   return (
     <div className="min-h-[90vh] flex flex-col items-center justify-center p-4 py-12 relative overflow-hidden">
+      <GenerationLimitModal 
+        isOpen={showLimitModal} 
+        onClose={() => setShowLimitModal(false)}
+        onUpgrade={() => {
+          setShowLimitModal(false);
+          // Standard upgrade flow
+          navigate('/dashboard?upgrade=true');
+        }}
+      />
+      
       {/* Background decorations */}
       <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-accent/5 rounded-full blur-[120px] pointer-events-none -z-10"></div>
       <div className="absolute bottom-1/4 right-1/4 w-[600px] h-[600px] bg-highlight/5 rounded-full blur-[120px] pointer-events-none -z-10"></div>

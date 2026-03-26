@@ -72,8 +72,8 @@ const MainLayout = () => {
             </div>
           ) : (
             <>
-              <Link to="/login" className="text-primary hover:text-accent text-sm font-black uppercase tracking-widest transition-colors px-4">Login</Link>
-              <Link to="/signup" className="btn btn-primary px-8 py-3 text-sm shadow-glow font-black uppercase tracking-widest text-secondary">Generate My Brand Kit</Link>
+              <Link to="/login" state={{ context: 'login' }} className="text-primary hover:text-accent text-sm font-black uppercase tracking-widest transition-colors px-4">Login</Link>
+              <Link to="/login" state={{ context: 'get_started' }} className="btn btn-primary px-8 py-3 text-sm shadow-glow font-black uppercase tracking-widest text-secondary">Generate My Brand Kit</Link>
             </>
           )}
         </div>
