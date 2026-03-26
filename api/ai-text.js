@@ -1,6 +1,6 @@
 /**
  * api/ai-text.js
- * Vercel Serverless Function — NVIDIA Chat API Proxy
+ * Vercel Serverless Function — Groq Chat API Proxy with Fallback
  */
 
 const GROQ_TEXT_URL = 'https://api.groq.com/openai/v1/chat/completions';
@@ -141,7 +141,7 @@ export default async function handler(req, res) {
 
   // Helper to call Groq with a specific model
   const callGroq = async (model, promptString) => {
-    const response = await fetch(GROQ_TEXT_URL, {
+    return await fetch(GROQ_TEXT_URL, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -156,7 +156,6 @@ export default async function handler(req, res) {
         max_tokens: 1024,
       }),
     });
-    return response;
   };
 
   try {
