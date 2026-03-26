@@ -15,10 +15,14 @@ const isValidConfig =
   supabaseAnonKey !== 'your-anon-key-here';
 
 if (!isValidConfig) {
-  if (isProd && !useMockAuth) {
+  if (isProd) {
     console.error(
       '[Kreavia.ai] CRITICAL: Supabase credentials missing or invalid in production.\n' +
-      'Authentication will FAIL. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your hosting dashboard.'
+      `DEBUG INFO:\n` +
+      `- URL present: ${!!supabaseUrl}\n` +
+      `- Key present: ${!!supabaseAnonKey}\n` +
+      `- VITE_USE_MOCK_AUTH: ${import.meta.env.VITE_USE_MOCK_AUTH}\n` +
+      '- isMockMode will be TRUE because of invalid config.'
     );
   } else {
     console.warn(
