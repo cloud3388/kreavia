@@ -43,9 +43,10 @@ export default async function handler(req, res) {
     }
 
     const data = await nvidiaRes.json();
-    const base64 = data?.artifacts?.[0]?.base64;
+    const base64 = data?.image || data?.artifacts?.[0]?.base64 || null;
     
     if (!base64) {
+      console.error('[ai-image] No image data. Response:', JSON.stringify(data).slice(0, 300));
       return res.status(500).json({ error: 'No image data returned from NVIDIA' });
     }
 
