@@ -1,5 +1,5 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import MainLayout from './components/layout/MainLayout';
@@ -17,9 +17,24 @@ import SettingsPage from './pages/dashboard/SettingsPage';
 import PublicBrandKitPage from './pages/PublicBrandKitPage';
 import SuccessPage from './pages/SuccessPage';
 
+const AnalyticsTracker = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    if (typeof window.gtag === 'function') {
+      window.gtag('config', 'G-HK2VPE5XMF', {
+        page_path: location.pathname + location.search,
+      });
+    }
+  }, [location]);
+
+  return null;
+};
+
 function App() {
   return (
     <Router>
+      <AnalyticsTracker />
       <AuthProvider>
         <Routes>
           {/* Public Routes */}
