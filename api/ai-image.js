@@ -1,9 +1,9 @@
 /**
  * api/ai-image.js
- * Vercel Serverless Function — NVIDIA SDXL Proxy
+ * Vercel Serverless Function — NVIDIA SD3 Proxy
  */
 
-const NVIDIA_IMAGE_URL = 'https://ai.api.nvidia.com/v1/genai/stabilityai/stable-diffusion-xl';
+const NVIDIA_IMAGE_URL = 'https://ai.api.nvidia.com/v1/genai/stabilityai/stable-diffusion-3-medium';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -18,14 +18,12 @@ export default async function handler(req, res) {
   const { prompt, style = 'luxury' } = req.body;
 
   const body = {
-    text_prompts: [
-      { text: prompt, weight: 1.0 },
-      { text: 'blurry, low quality, watermark, text, signature, deformed', weight: -1.0 }
-    ],
+    prompt: prompt,
+    negative_prompt: 'blurry, low quality, watermark, text, signature, deformed',
     cfg_scale: 7,
-    steps: 30,
-    width: 1024,
-    height: 1024,
+    steps: 28,
+    seed: 0,
+    aspect_ratio: '1:1',
   };
 
   try {

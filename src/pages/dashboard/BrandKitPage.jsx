@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import SocialFeedPreview from '../../components/dashboard/SocialFeedPreview';
+import LogoEditorModal from '../../components/dashboard/LogoEditorModal';
 import UpgradeModal from '../../components/UpgradeModal';
 import { LockedOverlay, LockedPopover, LockedButton } from '../../components/common/LockedFeatures';
 import { NudgeBanner } from '../../components/common/UpgradeNudges';
@@ -38,6 +39,7 @@ const BrandKitPage = () => {
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [selectedVersion, setSelectedVersion] = useState(null);
   const [isComparing, setIsComparing] = useState(false);
+  const [showLogoEditor, setShowLogoEditor] = useState(false);
 
   const handleShare = (e) => {
     if (isFeatureLocked('shareLink')) {
@@ -583,6 +585,26 @@ const BrandKitPage = () => {
       {/* Upgrade Modal Hook */}
       <UpgradeModal isOpen={showProModal} onClose={() => setShowProModal(false)} />
 
+      {/* Logo Editor Modal */}
+      <LogoEditorModal
+        isOpen={showLogoEditor}
+        onClose={() => setShowLogoEditor(false)}
+        brandData={brandData}
+        onSave={async (newLogo) => {
+          const updatedKit = {
+            ...brandData,
+            logos: [newLogo, ...(brandData.logos || []).slice(1)],
+          };
+          setBrandData(updatedKit);
+          sessionStorage.setItem('currentBrandKit', JSON.stringify(updatedKit));
+          const { saveBrand: save } = await import('../../utils/storage');
+          await save(updatedKit);
+          const brands = await import('../../utils/storage').then(m => m.getBrands());
+          setUserBrands(brands);
+          window.dispatchEvent(new Event('kreavia_brands_updated'));
+        }}
+      />
+
       {/* Brand Limit Modal */}
       <AnimatePresence>
         {showBrandLimitModal && (
@@ -686,10 +708,15 @@ const BrandKitPage = () => {
                  </div>
                  <h3 className="text-2xl font-headline text-primary font-bold">Official Marks</h3>
                </div>
-               <button onClick={handleRegenerate} disabled={isRegenerating} className="text-[10px] font-bold text-accent uppercase tracking-widest hover:text-primary transition-colors border-b border-accent/20 pb-1 flex items-center gap-1">
-                 {isRegenerating ? <div className="w-3 h-3 border border-accent/20 border-t-accent rounded-full animate-spin"></div> : <Sparkles size={12} />}
-                 Regenerate AI Identity
-               </button>
+               <div className="flex items-center gap-3">
+                  <button onClick={() => setShowLogoEditor(true)} className="text-[10px] font-bold text-primary uppercase tracking-widest hover:text-accent transition-colors border-b border-primary/20 pb-1 flex items-center gap-1">
+                    <Edit size={12} /> Edit Logo
+                  </button>
+                  <button onClick={handleRegenerate} disabled={isRegenerating} className="text-[10px] font-bold text-accent uppercase tracking-widest hover:text-primary transition-colors border-b border-accent/20 pb-1 flex items-center gap-1">
+                    {isRegenerating ? <div className="w-3 h-3 border border-accent/20 border-t-accent rounded-full animate-spin"></div> : <Sparkles size={12} />}
+                    Regenerate AI Identity
+                  </button>
+                </div>
              </div>
              
              <div className="glass-card flex flex-col items-center justify-center relative group overflow-hidden border-light h-[280px] bg-white shadow-lg">

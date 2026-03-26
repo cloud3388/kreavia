@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Lock, X, Crown } from 'lucide-react';
+import { Lock, X, Crown, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 /**

@@ -78,10 +78,10 @@ const SuccessPage = () => {
           transition={{ delay: 0.3 }}
         >
           <h1 className="text-4xl font-headline font-bold text-primary mb-4">
-            Welcome to Pro Studio
+            Welcome to Pro Studio!
           </h1>
           <p className="text-muted text-lg mb-10 leading-relaxed">
-            Your account has been upgraded. All Pro features—including unlimited exports and AI generations—are now unlocked.
+            Your account has been upgraded. All Pro features are now unlocked.
           </p>
         </motion.div>
 

@@ -1,10 +1,10 @@
 /**
  * nvidiaService.js
- * Image Generation via NVIDIA AI API (Stable Diffusion XL)
+ * Image Generation via NVIDIA AI API (Stable Diffusion 3 Medium)
  *
- * Model: stabilityai/stable-diffusion-xl
- * Docs: https://build.nvidia.com/stabilityai/stable-diffusion-xl
- * API:  https://ai.api.nvidia.com/v1/genai/stabilityai/stable-diffusion-xl
+ * Model: stabilityai/stable-diffusion-3-medium
+ * Docs: https://build.nvidia.com/stabilityai/stable-diffusion-3-medium
+ * API:  https://ai.api.nvidia.com/v1/genai/stabilityai/stable-diffusion-3-medium
  *
  * Two modes:
  *   1. DIRECT  — browser → Vite proxy (/nvidia-api) → NVIDIA  [DEV only]
@@ -17,7 +17,7 @@
  * Fallback: Returns a placehold.co image URL when no API key is configured.
  */
 
-const NVIDIA_API_URL = '/nvidia-api/v1/genai/stabilityai/stable-diffusion-xl'; // dev only (Vite proxy)
+const NVIDIA_API_URL = '/nvidia-api/v1/genai/stabilityai/stable-diffusion-3-medium'; // dev only (Vite proxy)
 const PROXY_URL      = '/api/generate-image'; // production (Vercel serverless function)
 
 const apiKey   = import.meta.env.VITE_NVIDIA_API_KEY;
@@ -30,19 +30,16 @@ const isMock = isPlaceholder && !useProxy;
 console.log(`[NVIDIA] Mode: ${isMock ? 'MOCK (no valid key)' : useProxy ? 'PROXY' : 'DIRECT → Vite proxy → ai.api.nvidia.com'}`);
 
 // ──────────────────────────────────────────
-// Build NVIDIA SDXL request body
+// Build NVIDIA SD3 request body
 // ──────────────────────────────────────────
 const buildNvidiaInput = (prompt, options = {}) => ({
-  text_prompts: [
-    { text: prompt,                      weight: 1.0  },
-    { text: options.negativePrompt || 'blurry, low quality, watermark, text overlay, ugly, deformed, noisy, pixelated', weight: -1.0 },
-  ],
-  sampler:       options.sampler      || 'K_DPM_2_ANCESTRAL',
-  steps:         options.steps        || 25,
+  prompt:        prompt,
+  negative_prompt: options.negativePrompt || 'blurry, low quality, watermark, text overlay, ugly, deformed, noisy, pixelated',
+  steps:         options.steps        || 28,
   cfg_scale:     options.guidanceScale || 7.5,
   seed:          options.seed         || 0,          // 0 = random
-  width:         options.width        || 1024,
-  height:        options.height       || 1024,
+  // Note: SD3 often prefers aspect_ratio instead of explicit width/height
+  aspect_ratio:  options.aspectRatio  || '1:1',
 });
 
 // ──────────────────────────────────────────
@@ -107,7 +104,7 @@ const mockImage = (prompt, width = 400, height = 400) => {
 // ──────────────────────────────────────────
 
 /**
- * Generate an image from a text prompt using NVIDIA SDXL.
+ * Generate an image from a text prompt using NVIDIA SD3.
  * @param {string} prompt   - Text prompt for image generation
  * @param {object} options  - Optional: { width, height, steps, guidanceScale, negativePrompt, seed }
  * @returns {Promise<string>} - Data URL (base64) or fallback placeholder URL
@@ -144,7 +141,7 @@ export const generateImage = async (prompt, options = {}) => {
  * @returns {Promise<string[]>} - Array of image URLs / data URLs
  */
 export const generateLogoVariations = async (prompts, options = {}) =>
-  Promise.all(prompts.map(p => generateImage(p, { ...options, width: 1024, height: 1024 })));
+  Promise.all(prompts.map(p => generateImage(p, { ...options, aspectRatio: '1:1' })));
 
 /**
  * Generate a social media template background image.
@@ -153,18 +150,17 @@ export const generateLogoVariations = async (prompts, options = {}) =>
  * @returns {Promise<string>} - Image URL / data URL
  */
 export const generateTemplateBackground = async (prompt, format = 'square') => {
-  const dimensions = {
-    square:    { width: 1024, height: 1024 },
-    portrait:  { width: 1024, height: 1280 },
-    landscape: { width: 1280, height: 720  },
-    story:     { width: 1024, height: 1792 },
+  const aspectRatios = {
+    square:    '1:1',
+    portrait:  '4:5',
+    landscape: '16:9',
+    story:     '9:16',
   };
 
-  const { width, height } = dimensions[format] || dimensions.square;
+  const aspectRatio = aspectRatios[format] || '1:1';
   return generateImage(prompt, {
-    width,
-    height,
-    steps:         20,
+    aspectRatio,
+    steps:         28,
     guidanceScale: 7,
     negativePrompt: 'text, watermark, logo, people, faces, blurry, low quality',
   });

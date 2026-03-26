@@ -4,67 +4,113 @@ import {
   ArrowLeft, ArrowRight, Sparkles, Wand2, Dumbbell, Plane, Shirt, 
   Gamepad2, Briefcase, Coffee, Check, Cpu, Utensils, Home, Users, Laptop
 } from 'lucide-react';
-import { saveBrand, getBrandById } from '../utils/storage';
+import { saveBrand } from '../utils/storage';
 import { motion, AnimatePresence } from 'framer-motion';
 import { buildBrandDNA } from '../ai/brandDNA';
-import { generateBrandKit } from '../ai/pipeline';
-import { generateHybridKit } from '../services/hybridAIService';
+import { generateStep1DNA, generateStep2Logo, generateStep3Content } from '../ai/pipeline';
 import { useAuth } from '../context/AuthContext';
-import { getPlanStatus, getRemainingGenerations, incrementGenerationCount } from '../utils/planPermissions';
+import { getRemainingGenerations, incrementGenerationCount } from '../utils/planPermissions';
 
-const getPipelineSteps = () => [
-  'Forging Brand Identity DNA',
-  'Synthesizing Chromatic Palette',
-  'Iterating Logo Manifestations',
-  'Curating Typographic Pairings',
-  'Architecting Social Templates',
-  'Generating Viral Content Hooks',
-  'Building Brand Narratives',
-  'Visualizing Creative Assets'
+const PIPELINE_STEPS = [
+  'Building brand profile and color palette',
+  'Creating your logo',
+  'Writing content strategy and templates',
 ];
 
-const LoadingScreen = ({ currentStep, currentLabel, formData }) => {
-  const steps = getPipelineSteps(formData);
-  const displayStep = Math.min(currentStep + 1, steps.length);
-  
+const LoadingScreen = ({ stepStatuses, onRetry }) => {
+  const activeStep = stepStatuses.findIndex(s => s === 'running');
+  const doneCount  = stepStatuses.filter(s => s === 'done').length;
+  const hasError   = stepStatuses.some(s => s === 'error');
+
   return (
-    <div className="flex flex-col items-center justify-center py-24 gap-12 w-full">
+    <div className="flex flex-col items-center justify-center py-16 gap-10 w-full">
+      {/* Spinner or done state */}
       <div className="relative">
-         <div className="w-24 h-24 border-4 border-light border-t-accent rounded-full animate-spin"></div>
-         <Sparkles className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-accent" size={32} />
+        {hasError ? (
+          <div className="w-24 h-24 rounded-full bg-red-500/10 flex items-center justify-center">
+            <span style={{ fontSize: 36 }}>⚠️</span>
+          </div>
+        ) : doneCount === PIPELINE_STEPS.length ? (
+          <div className="w-24 h-24 rounded-full bg-accent/10 flex items-center justify-center">
+            <Check size={40} className="text-accent" />
+          </div>
+        ) : (
+          <>
+            <div className="w-24 h-24 border-4 border-light border-t-accent rounded-full animate-spin"></div>
+            <Sparkles className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-accent" size={32} />
+          </>
+        )}
       </div>
-      
+
       <div className="flex flex-col items-center w-full max-w-lg">
-         <h2 className="text-2xl font-headline text-center mb-1">Creating your brand identity...</h2>
-         <p className="text-accent text-sm font-ui mb-2 animate-pulse">{currentLabel}</p>
-         <div className="text-sm font-bold tracking-widest uppercase text-muted mb-8">
-           Step {displayStep} of {steps.length}
-         </div>
-         
-         <div className="flex flex-col gap-3 w-full">
-            {steps.map((text, idx) => {
-               const isComplete = currentStep > idx;
-               const isCurrent = currentStep === idx;
-               
-               return (
-                 <motion.div 
-                    key={idx}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: isComplete ? 1 : isCurrent ? 0.8 : 0.25, x: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="flex items-center gap-4 bg-card/50 p-4 rounded-lg border border-light/50"
-                 >
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-all ${
-                      isComplete ? 'bg-accent text-primary' : isCurrent ? 'border-2 border-accent' : 'border border-light'
-                    }`}>
-                       {isComplete && <Check size={14} />}
-                       {isCurrent && <div className="w-3 h-3 rounded-full bg-accent animate-pulse" />}
-                    </div>
-                    <span className={`font-ui text-sm ${isComplete ? 'text-primary font-medium' : isCurrent ? 'text-accent' : 'text-muted'}`}>{text}</span>
-                 </motion.div>
-               );
-            })}
-         </div>
+        <h2 className="text-2xl font-headline text-center mb-1">
+          {hasError ? 'Generation paused' : doneCount === PIPELINE_STEPS.length ? 'Brand kit ready!' : 'Creating your brand identity...'}
+        </h2>
+        {!hasError && doneCount < PIPELINE_STEPS.length && (
+          <p className="text-accent text-sm font-ui mb-2 animate-pulse">
+            {activeStep >= 0 ? PIPELINE_STEPS[activeStep] : 'Initializing...'}
+          </p>
+        )}
+        <div className="text-sm font-bold tracking-widest uppercase text-muted mb-8">
+          {hasError ? 'A step failed — retry below' : `Step ${Math.min(doneCount + 1, PIPELINE_STEPS.length)} of ${PIPELINE_STEPS.length}`}
+        </div>
+
+        <div className="flex flex-col gap-3 w-full">
+          {PIPELINE_STEPS.map((text, idx) => {
+            const status = stepStatuses[idx] || 'pending';
+            const isDone    = status === 'done';
+            const isRunning = status === 'running';
+            const isError   = status === 'error';
+            const isPending = status === 'pending';
+
+            return (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: isPending ? 0.3 : 1, x: 0 }}
+                transition={{ duration: 0.3 }}
+                className={`flex items-center gap-4 p-4 rounded-lg border ${
+                  isError   ? 'bg-red-500/5 border-red-500/20' :
+                  isDone    ? 'bg-accent/5  border-accent/20'   :
+                  isRunning ? 'bg-card/50   border-accent/30'   :
+                              'bg-card/30   border-light/50'
+                }`}
+              >
+                {/* Status Icon */}
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-all ${
+                  isDone    ? 'bg-accent text-white'             :
+                  isError   ? 'bg-red-500 text-white'            :
+                  isRunning ? 'border-2 border-accent'           :
+                              'border border-light'
+                }`}>
+                  {isDone    && <Check size={13} strokeWidth={3} />}
+                  {isError   && <span style={{ fontSize: 11, fontWeight: 900 }}>!</span>}
+                  {isRunning && <div className="w-3 h-3 rounded-full bg-accent animate-pulse" />}
+                </div>
+
+                {/* Label */}
+                <span className={`font-ui text-sm flex-1 ${
+                  isDone    ? 'text-primary font-semibold' :
+                  isError   ? 'text-red-500 font-medium'   :
+                  isRunning ? 'text-accent'                :
+                              'text-muted'
+                }`}>
+                  {text}
+                </span>
+
+                {/* Retry button on error */}
+                {isError && (
+                  <button
+                    onClick={() => onRetry(idx)}
+                    className="text-[10px] font-bold uppercase tracking-widest text-red-500 border border-red-500/30 rounded-full px-3 py-1 hover:bg-red-500/10 transition-colors shrink-0"
+                  >
+                    Retry
+                  </button>
+                )}
+              </motion.div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -76,8 +122,8 @@ const OnboardingPage = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [pipelineStep, setPipelineStep] = useState(0);
-  const [pipelineLabel, setPipelineLabel] = useState('Initializing...');
+  const [stepStatuses, setStepStatuses] = useState(['pending', 'pending', 'pending']);
+  const [currentBrandKit, setCurrentBrandKit] = useState(null);
   
   const [formData, setFormData] = useState({
     brandInputType: 'name', // 'name' or 'handle'
@@ -95,84 +141,109 @@ const OnboardingPage = () => {
   const handleNext = () => setStep(s => Math.min(s + 1, 5));
   const handlePrev = () => setStep(s => Math.max(s - 1, 1));
   
+  // Run one step of the pipeline, update status, persist kit
+  const runStep = async (stepIndex, kit) => {
+    const dna = kit.dna;
+    setStepStatuses(prev => prev.map((s, i) => i === stepIndex ? 'running' : s));
+    try {
+      if (stepIndex === 0) {
+        const dnaRes = await generateStep1DNA(dna);
+        kit.colors = {
+          primary:   dnaRes.palette?.primary    || '#1A1A1A',
+          secondary: dnaRes.palette?.secondary  || '#FBFBFD',
+          accent:    dnaRes.palette?.accent     || '#C6A96B',
+          highlight: dnaRes.palette?.background || '#FFFFFF',
+        };
+        kit.palette        = dnaRes.palette   || kit.colors;
+        kit.typography     = dnaRes.typography || { headline: 'Playfair Display', body: 'Inter', ui: 'Satoshi' };
+        kit.brandArchetype = dnaRes.archetype  || kit.brandArchetype;
+        kit.brandVoice     = dnaRes.tone       || kit.brandVoice;
+        kit.tagline        = dnaRes.tagline    || 'Elevate Your Standard';
+        kit.brandScore     = dnaRes.quality_score || 92;
+      } else if (stepIndex === 1) {
+        const logoRes = await generateStep2Logo(dna, kit.palette || kit.colors);
+        kit.logos = logoRes.logos || [
+          { url: `https://placehold.co/400x400/${(kit.colors?.primary || '#1A1A1A').replace('#', '')}/${(kit.colors?.accent || '#C6A96B').replace('#', '')}?text=${dna.brand_name[0]}&font=playfair`, model_used: 'fallback' }
+        ];
+      } else if (stepIndex === 2) {
+        const contentRes = await generateStep3Content(dna);
+        kit.contentIdeas = contentRes.contentIdeas || [];
+        kit.templates    = contentRes.templates    || [];
+        kit.hashtags     = contentRes.hashtags     || [];
+      }
+      await saveBrand(kit);
+      sessionStorage.setItem('currentBrandKit', JSON.stringify(kit));
+      setCurrentBrandKit({ ...kit });
+      setStepStatuses(prev => prev.map((s, i) => i === stepIndex ? 'done' : s));
+      console.log(`[Onboarding] Step ${stepIndex + 1} done.`);
+      return true;
+    } catch (err) {
+      console.error(`[Onboarding] Step ${stepIndex + 1} failed:`, err);
+      setStepStatuses(prev => prev.map((s, i) => i === stepIndex ? 'error' : s));
+      return false;
+    }
+  };
+
   const handleGenerate = async () => {
-    const isPro = getPlanStatus().maxGenerationsPerMonth === Infinity;
     const isTestAccount = user?.email === 'cloud331988@gmail.com';
     const remaining = getRemainingGenerations();
-
     if (remaining <= 0 && !isTestAccount) {
-      alert(`Generation limit reached for your current plan. Please upgrade to Pro to create more brands and unlock unlimited generations.`);
+      alert('Generation limit reached. Please upgrade to Pro to create more brands.');
       return;
     }
 
     setLoading(true);
-    setPipelineStep(0);
-    try {
-      incrementGenerationCount();
-      
-      const dna = buildBrandDNA(formData);
-      // Store Brand DNA in sessionStorage so BrandKitPage can use it
-      sessionStorage.setItem('brandDNA', JSON.stringify(dna));
+    setStepStatuses(['pending', 'pending', 'pending']);
+    incrementGenerationCount();
 
-      // 2. Execute a minimalist core generation (Fast, Reliable)
-      console.log('[Onboarding] Phase 1: Core Generation...');
-      const result = await generateBrandKit(dna, (stepIndex, label) => {
-        setPipelineStep(stepIndex);
-        setPipelineLabel(label);
-      });
-      console.log('[Onboarding] Core Generation Success:', result);
+    const dna = buildBrandDNA(formData);
+    sessionStorage.setItem('brandDNA', JSON.stringify(dna));
 
-      // IMMEDIATE SAVE: Store the core kit right now before anything else can fail
-      const initialKit = {
-        id: crypto.randomUUID(),
-        createdAt: new Date().toISOString(),
-        ...result,
-        // Guarantee critical fields even if pipeline was partially incomplete
-        brandArchetype: result.brandArchetype || dna.brand_personality || 'The Visionary',
-        logos: (result.logos && result.logos.length > 0) ? result.logos : [
-           { url: `https://placehold.co/400x400/1A1A1A/C6A96B?text=${(dna.brand_name || 'B')[0].toUpperCase()}&font=playfair` }
-        ],
-        hybridContent: [] // Placeholder
-      };
+    const kit = {
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+      dna,
+      brandName: dna.brand_name,
+      brandArchetype: dna.brand_personality || 'The Visionary',
+      brandVoice: dna.tone || 'Professional',
+      logos: [],
+    };
+    await saveBrand(kit);
+    localStorage.setItem('kreavia_active_brand_id', kit.id);
+    setCurrentBrandKit(kit);
 
-      try {
-        await saveBrand(initialKit);
-        sessionStorage.setItem('currentBrandKit', JSON.stringify(initialKit));
-        console.log('[Onboarding] Core Kit Persisted Successfully.');
-      } catch (saveErr) {
-        console.error('[Onboarding] Critical Storage Error:', saveErr);
-      }
+    const step1OK = await runStep(0, kit);
+    if (!step1OK) return; // Wait for manual retry
 
-      // 3. Enhancement phase: Hybrid Content (Optional)
-      console.log('[Onboarding] Phase 2: Hybrid Enhancement...');
-      let hybridResult = [];
-      try {
-        hybridResult = await generateHybridKit(dna, (step, msg) => {
-            setPipelineStep(5 + step); 
-            setPipelineLabel(msg);
-        });
-        
-        // UPDATE SAVE: Merge hybrid results into the existing storage
-        const brand = await getBrandById(initialKit.id);
-        if (brand) {
-          brand.hybridContent = hybridResult;
-          await saveBrand(brand);
-          sessionStorage.setItem('currentBrandKit', JSON.stringify(brand));
-          console.log('[Onboarding] Hybrid Assets Merged Successfully.');
+    const step2OK = await runStep(1, kit);
+    if (!step2OK) return; // Wait for manual retry (logo is optional — could continue)
+
+    await runStep(2, kit);
+
+    // All done — navigate
+    sessionStorage.setItem('brand_kit_just_generated', 'true');
+    setTimeout(() => navigate('/dashboard/brand-kit'), 800);
+  };
+
+  const handleRetry = async (failedStepIndex) => {
+    if (!currentBrandKit) return;
+    const kit = { ...currentBrandKit };
+    const ok = await runStep(failedStepIndex, kit);
+    if (ok) {
+      // Check if there are subsequent pending steps to continue
+      const nextPending = stepStatuses.findIndex((s, i) => i > failedStepIndex && s === 'pending');
+      if (nextPending !== -1) {
+        for (let i = nextPending; i < 3; i++) {
+          const stepOK = await runStep(i, kit);
+          if (!stepOK) break;
         }
-      } catch (hybridErr) {
-        console.warn('[Onboarding] Hybrid generation failed, skipping secondary assets:', hybridErr);
       }
-
-      // Set session flag for nudge
-      sessionStorage.setItem('brand_kit_just_generated', 'true');
-
-      // Small pause so user sees "Done" before navigating
-      setTimeout(() => navigate('/dashboard/brand-kit'), 800);
-    } catch (err) {
-      console.error('[Onboarding] Pipeline error:', err);
-      // Fallback: navigate anyway so user isn't stuck
-      setTimeout(() => navigate('/dashboard/brand-kit'), 1000);
+      // Check if all done now
+      const allDone = stepStatuses.every((s, i) => i === failedStepIndex ? true : s === 'done');
+      if (allDone) {
+        sessionStorage.setItem('brand_kit_just_generated', 'true');
+        setTimeout(() => navigate('/dashboard/brand-kit'), 800);
+      }
     }
   };
 
@@ -221,7 +292,7 @@ const OnboardingPage = () => {
 
         <div className="p-8 md:p-12 flex-1 flex flex-col">
           {loading ? (
-            <LoadingScreen currentStep={pipelineStep} currentLabel={pipelineLabel} formData={formData} />
+            <LoadingScreen stepStatuses={stepStatuses} onRetry={handleRetry} />
           ) : (
             <>
               {/* Header */}

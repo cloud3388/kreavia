@@ -46,7 +46,7 @@ import { generateLogoVariations } from '../services/nvidiaService';
 // ──────────────────────────────────────────
 const MODEL_TIERS = {
   brand_palette:   'llama-3.3-70b-versatile',  // text → JSON (Groq)
-  logo:            'nvidia-sdxl',              // text → image (NVIDIA AI API)
+  logo:            'nvidia-sd3',               // text → image (NVIDIA AI API)
   font_pairing:    'llama-3.3-70b-versatile',  // text → JSON (Groq)
   template:        'llama-3.3-70b-versatile',  // text → JSON (Groq)
   content_ideas:   'llama-3.3-70b-versatile',  // text → JSON (Groq)
@@ -177,9 +177,9 @@ const getDynamicIdeas = (dna) => {
 };
 
 const MOCK_LOGOS = [
-  { style: 'monogram', url: 'https://placehold.co/400x400/1A1A1A/C6A96B?text=B&font=playfair', model_used: 'nvidia-sdxl' },
-  { style: 'symbol',   url: 'https://placehold.co/400x400/1A1A1A/FBFBFD?text=✧&font=inter',   model_used: 'nvidia-sdxl' },
-  { style: 'wordmark', url: 'https://placehold.co/400x200/FBFBFD/1A1A1A?text=BRAND&font=playfair', model_used: 'nvidia-sdxl' },
+  { style: 'monogram', url: 'https://placehold.co/400x400/1A1A1A/C6A96B?text=B&font=playfair', model_used: 'nvidia-sd3' },
+  { style: 'symbol',   url: 'https://placehold.co/400x400/1A1A1A/FBFBFD?text=✧&font=inter',   model_used: 'nvidia-sd3' },
+  { style: 'wordmark', url: 'https://placehold.co/400x200/FBFBFD/1A1A1A?text=BRAND&font=playfair', model_used: 'nvidia-sd3' },
 ];
 
 const MOCK_TEMPLATE = {
@@ -240,20 +240,20 @@ const generateFonts = async (dna, cacheKey) => {
 const generateLogos = async (dna, palette) => {
   const logoTypes = ['monogram', 'symbol', 'wordmark'];
 
-  // Build a focused SDXL prompt for each logo style
+  // Build a focused SD3 prompt for each logo style
   const prompts = logoTypes.map(type => buildLogoPrompt(dna, palette, type));
 
   try {
     const urls = await generateLogoVariations(prompts, {
-      model:  'nvidia-sdxl',
-      steps:  30,
+      model:  'nvidia-sd3',
+      steps:  28,
       guidanceScale: 8,     // higher = more prompt adherent (better for logos)
     });
 
     return logoTypes.map((style, i) => ({
       style,
       url:        urls[i],
-      model_used: 'nvidia-sdxl',
+      model_used: 'nvidia-sd3',
       prompt:     prompts[i],
     }));
   } catch (err) {
@@ -302,96 +302,90 @@ const generateHashtags = async (dna) => {
   return validateHashtags(data || []);
 };
 
-// ──────────────────────────────────────────
-// Main Entry Point — Full Brand Kit Pipeline
-// ──────────────────────────────────────────
+const NVIDIA_KEY = import.meta.env.VITE_NVIDIA_API_KEY;
 
-/**
- * @param {object} dna - Brand DNA from buildBrandDNA()
- * @param {function} onProgress - Callback: (step: number, label: string) => void
- * @returns {object} Full brand kit result
- */
-export const generateBrandKit = async (dna, onProgress = () => {}) => {
-  try {
-    const cacheKey = dnaCacheKey(dna);
-    const totalCredits = Object.values(CREDITS_PER_GEN).reduce((a, b) => a + b, 0);
+export const generateStep1DNA = async (dna) => {
+  if (USE_PROXY) {
+    const res = await fetch('/api/generate/brand-dna', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dna })
+    });
+    if (!res.ok) throw new Error('Failed to generate brand DNA');
+    return res.json();
+  } else {
+    const prompt = `You are an elite, world-class luxury brand strategist and creative director.\nCreate the core visual DNA for the following brand:\nBrand Name/Handle: ${dna.brand_name}\nNiche: ${dna.niche}\nStyle: ${dna.style}\nAudience: ${dna.audience}\nDescription: ${dna.brief}\n\nYou must output a highly targeted JSON object detailing the core brand identity carefully curated to the niche and style provided.\nLimit typography to valid Google Fonts that pair exceptionally well together. Use premium, highly cohesive hex color codes.\n\nOutput ONLY valid JSON matching this exact structure:\n{\n  "palette": {\n    "primary": "#HEX",\n    "secondary": "#HEX",\n    "accent": "#HEX",\n    "background": "#HEX",\n    "rationale": "..."\n  },\n  "typography": {\n    "heading": "Font Name",\n    "body": "Font Name",\n    "accent": "Font Name",\n    "rationale": "..."\n  },\n  "tagline": "A short, punchy, conversion-focused tagline (max 6 words).",\n  "archetype": "The specific Jungian archetype",\n  "tone": "3 descriptive adjectives about the brand tone"\n}`;
+    const response = await fetch('/groq-api/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${GROQ_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: MODEL_TIERS.brand_palette, messages: [{ role: 'user', content: prompt }],
+        temperature: 0.7, max_tokens: 1024, response_format: { type: 'json_object' }
+      })
+    });
+    const data = await response.json();
+    const content = data.choices[0].message.content;
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    const result = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(content);
+    return { ...result, quality_score: 92 };
+  }
+};
 
-    // Always clear in-memory cache for fresh generation
-    clearL1Cache();
-    console.log(`[Pipeline] Starting brand kit generation for key: ${cacheKey}`);
-    
-    // Step 0: Profile built
-    onProgress(0, 'Building brand profile...');
-    await new Promise(r => setTimeout(r, 400));
+export const generateStep2Logo = async (dna, palette) => {
+  if (USE_PROXY) {
+    const res = await fetch('/api/generate/logo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dna, palette })
+    });
+    if (!res.ok) throw new Error('Failed to generate logo');
+    return res.json();
+  } else {
+    const primary = palette.primary || '#1A1A1A';
+    const accent = palette.accent || '#C6A96B';
+    const name = dna.brand_name || 'Brand';
+    const prompt = `A luxury minimalist logo design for ${name}. Niche: ${dna.niche}. Features a sleek monogram or abstract geometric symbol centered on a solid ${primary} background. The logo mark itself should be a luxurious ${accent} color. Vector art, flat design, perfectly symmetrical, whitespace, extremely premium, corporate identity, Dribbble aesthetic.`;
 
-    // Step 1: Color Palette
-    onProgress(1, 'Generating color palette...');
-    const paletteResult = await generatePalette(dna, cacheKey);
-    const palette = paletteResult.data;
+    const response = await fetch('/nvidia-api/v1/genai/stabilityai/stable-diffusion-3-medium', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${NVIDIA_KEY}`, 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        prompt: prompt,
+        negative_prompt: '3d, detailed, realistic, photography, shadows, gradients, mockup, text, watermark, messy, uneven, noise',
+        cfg_scale: 8, steps: 28, aspect_ratio: '1:1',
+      }),
+    });
+    const data = await response.json();
+    if (data.artifacts?.[0]?.base64) {
+      return { logos: [{ style: 'symbol', url: `data:image/png;base64,${data.artifacts[0].base64}`, model_used: 'nvidia-sd3' }] };
+    }
+    throw new Error('NVIDIA Image failed');
+  }
+};
 
-    // Step 2: Logo
-    onProgress(2, 'Creating logo concepts...');
-    const logos = await generateLogos(dna, palette);
-
-    // Step 3: Fonts
-    onProgress(3, 'Selecting typography...');
-    const fontsResult = await generateFonts(dna, cacheKey);
-    const fonts = fontsResult.data;
-
-    // Step 4: Templates
-    onProgress(4, 'Building templates...');
-    const templates = await generateTemplateLayouts(dna);
-
-    // Step 5: Content Ideas
-    onProgress(5, 'Writing content ideas...');
-    const ideas = await generateContentIdeas(dna);
-    const hashtags = await generateHashtags(dna);
-
-    // Assemble final result
-    const result = {
-      dna,
-      colors: {
-        primary:    palette.primary,
-        secondary:  palette.secondary,
-        accent:     palette.accent,
-        highlight:  palette.background,
-      },
-      palette,
-      typography: {
-        headline: fonts.heading,
-        body:     fonts.body,
-        ui:       fonts.accent,
-      },
-      logos,
-      templates,
-      contentIdeas: ideas,
-      hashtags,
-      brandScore:     paletteResult.data.quality_score || 92,
-      brandArchetype: dna.brand_personality,
-      brandVoice:     dna.tone,
-      totalCreditsUsed: totalCredits,
-      generatedAt: new Date().toISOString(),
-    };
-
-    console.log(`[Pipeline] Generation complete.`);
-    return result;
-  } catch (err) {
-    console.error('[Pipeline] FATAL ERROR in brand kit generation:', err);
-    // Return a bare-minimum valid result to prevent upstream crashes
-    return {
-      dna,
-      colors: { primary: '#1A1A1A', secondary: '#FBFBFD', accent: '#C6A96B', highlight: '#FFFFFF' },
-      palette: { primary: '#1A1A1A', secondary: '#FBFBFD', accent: '#C6A96B', background: '#FFFFFF' },
-      typography: { headline: 'Playfair Display', body: 'Inter', ui: 'Satoshi' },
-      logos: [],
-      templates: [],
-      contentIdeas: [],
-      hashtags: [],
-      brandScore: 80,
-      brandArchetype: dna.brand_personality || 'Modern Professional',
-      brandVoice: dna.tone || 'Professional',
-      error_occurred: true
-    };
+export const generateStep3Content = async (dna) => {
+  if (USE_PROXY) {
+    const res = await fetch('/api/generate/content', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dna })
+    });
+    if (!res.ok) throw new Error('Failed to generate content strategy');
+    return res.json();
+  } else {
+    const prompt = `You are a viral content strategist and creative director.\nCreate a comprehensive content strategy and social media templates for this brand:\nBrand Name: ${dna.brand_name}\nNiche: ${dna.niche}\nAudience: ${dna.audience}\nStyle: ${dna.style}\nBrief: ${dna.brief}\n\nOutput ONLY valid JSON matching this exact structure:\n{\n  "contentIdeas": [\n    {\n      "title": "Eye-catching title for the content piece",\n      "hook": "A scroll-stopping opening sentence",\n      "format": "reel" | "carousel" | "story",\n      "angle": "educational" | "inspirational" | "controversial" | "lifestyle"\n    }\n  ],\n  "templates": [\n    {\n      "type": "instagram_post",\n      "name": "Primary Value Post",\n      "text": "The main headline or quote for the graphic",\n      "canvas": "1080x1080"\n    },\n    {\n      "type": "reel_cover",\n      "name": "Reel Cover",\n      "text": "A massive, bold title for a short-form video",\n      "canvas": "1080x1920"\n    },\n    {\n      "type": "story",\n      "name": "Engagement Story",\n      "text": "An interactive question or poll text",\n      "canvas": "1080x1920"\n    }\n  ],\n  "hashtags": [\n    {\n      "tag": "#ExactHashtagWithHash",\n      "category": "large" | "medium" | "small",\n      "reach_est": 500000\n    }\n  ]\n}\n\nMake sure you generate exactly 5 varied contentIdeas, precisely 3 templates (one of each type), and exactly 10 highly relevant hashtags.`;
+    const response = await fetch('/groq-api/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${GROQ_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: MODEL_TIERS.template, messages: [{ role: 'user', content: prompt }],
+        temperature: 0.8, max_tokens: 1500, response_format: { type: 'json_object' }
+      })
+    });
+    const data = await response.json();
+    const content = data.choices[0].message.content;
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    return jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(content);
   }
 };
 

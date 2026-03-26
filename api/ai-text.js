@@ -121,14 +121,14 @@ export default async function handler(req, res) {
     `.trim();
   } else {
     prompt = `
-      ROLE: Elite brand strategist and SDXL prompt engineer.
+      ROLE: Elite brand strategist and SD3 prompt engineer.
       CONTEXT: Brand DNA: ${JSON.stringify(dna)}
       TASK: Generate social media content for a ${type}.
       
       REQUIREMENTS:
       1. Caption: Engaging, matches brand tone, under 150 chars.
       2. Tagline: Punchy, memorable, fits brand personality.
-      3. Image Prompt: Highly detailed SDXL prompt. Describe lighting, style (e.g. ${dna?.style}), and subject. No text in image.
+      3. Image Prompt: Highly detailed SD3 prompt. Describe lighting, style (e.g. ${dna?.style}), and subject. No text in image.
       
       OUTPUT FORMAT: Return valid JSON only.
       {
@@ -164,8 +164,8 @@ export default async function handler(req, res) {
     const data = await groqRes.json();
     const content = data.choices[0].message.content;
     
-    // Attempt to extract JSON if the model included extra text
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    // Attempt to extract JSON (object or array) if the model included extra text
+    const jsonMatch = content.match(/(\[[\s\S]*\]|\{[\s\S]*\})/);
     const result = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(content);
 
     return res.status(200).json(result);

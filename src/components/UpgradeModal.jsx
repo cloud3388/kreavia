@@ -11,8 +11,8 @@ const UpgradeModal = ({ isOpen, onClose }) => {
 
   const handlePlanCta = (data) => {
     if (data.plan === 'Pro Studio') {
-      const monthlyUrl = 'https://kreaviaai.lemonsqueezy.com/checkout/buy/4f343bae-36aa-41a1-806e-882b469317dd';
-      const yearlyUrl = 'https://kreaviaai.lemonsqueezy.com/checkout/buy/1341cf75-0a4a-4a7e-952a-89dbf6625cae';
+      const monthlyUrl = 'https://kreavia.lemonsqueezy.com/checkout/buy/16880859-ae94-40bb-abdd-f9277d74a277';
+      const yearlyUrl = 'https://kreavia.lemonsqueezy.com/checkout/buy/1341cf75-0a4a-4a7e-952a-89dbf6625cae';
       
       const baseUrl = data.isYearly ? yearlyUrl : monthlyUrl;
       const checkoutUrl = new URL(baseUrl);

@@ -10,7 +10,7 @@ import { dnaCacheKey } from '../ai/brandDNA';
 
 // Direct URLs (via Vite proxy in vite.config.js)
 const DIRECT_TEXT_URL  = '/groq-api/openai/v1/chat/completions';
-const DIRECT_IMAGE_URL = '/nvidia-api/v1/genai/stabilityai/stable-diffusion-xl';
+const DIRECT_IMAGE_URL = '/nvidia-api/v1/genai/stabilityai/stable-diffusion-3-medium';
 
 const groqKey = import.meta.env.VITE_GROQ_API_KEY;
 const imageKey    = import.meta.env.VITE_NVIDIA_API_KEY;
@@ -63,7 +63,7 @@ export const generateHybridContent = async (dna, type = 'post', onProgress = () 
       textData = await res.json();
     } else {
       // Direct call via Vite proxy
-      const prompt = `Generate a creative caption, tagline, and SDXL-compatible image prompt for a ${type} for a brand with this DNA: ${JSON.stringify(dna)}. Output JSON: {caption, tagline, imagePrompt}`;
+      const prompt = `Generate a creative caption, tagline, and SD3-compatible image prompt for a ${type} for a brand with this DNA: ${JSON.stringify(dna)}. Output JSON: {caption, tagline, imagePrompt}`;
       const res = await fetch(DIRECT_TEXT_URL, {
         method: 'POST',
         headers: {
@@ -114,8 +114,9 @@ export const generateHybridContent = async (dna, type = 'post', onProgress = () 
               'Accept': 'application/json',
             },
             body: JSON.stringify({
-              text_prompts: [{ text: textData.imagePrompt, weight: 1.0 }, { text: 'text, watermark, blurry', weight: -1.0 }],
-              cfg_scale: 7, steps: 25, width: 1024, height: 1024,
+              prompt: textData.imagePrompt,
+              negative_prompt: 'text, watermark, blurry',
+              cfg_scale: 7, steps: 28, aspect_ratio: '1:1',
             }),
           });
         }
@@ -177,11 +178,13 @@ export const generateHybridKit = async (dna, onProgress = () => {}) => {
   // Update progress for the whole kit
   onProgress(0, 'Initializing hybrid generation...');
   
-  const results = await Promise.all(types.map((type, idx) => {
-    return generateHybridContent(dna, type, (step, msg) => {
-      if (idx === 0) onProgress(step, msg); // Only report progress for the first one to avoid UI flicker
+  const results = [];
+  for (let i = 0; i < types.length; i++) {
+    const res = await generateHybridContent(dna, types[i], (step, msg) => {
+      if (i === 0) onProgress(step, msg); // Only report progress for the first one to avoid UI flicker
     });
-  }));
+    results.push(res);
+  }
 
   return results;
 };

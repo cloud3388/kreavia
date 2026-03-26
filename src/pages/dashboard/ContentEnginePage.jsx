@@ -11,7 +11,8 @@ import {
   Loader2,
   RefreshCw,
   Search,
-  BookOpen
+  BookOpen,
+  Crown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { isFeatureLocked, getPlanStatus } from '../../utils/planPermissions';

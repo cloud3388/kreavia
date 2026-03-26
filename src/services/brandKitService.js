@@ -17,9 +17,9 @@ const MOCK_BRAND_KIT = {
   brand_archetype: 'The Luxury Minimalist',
   brand_score: 92,
   logos: [
-    { id: 'logo-1', style: 'monogram', image_url: 'https://placehold.co/400x400/0F0F0F/C6A96B?text=B&font=playfair', model_used: 'SDXL' },
-    { id: 'logo-2', style: 'symbol',   image_url: 'https://placehold.co/400x400/0F0F0F/F5F5F5?text=✧&font=inter', model_used: 'SDXL' },
-    { id: 'logo-3', style: 'wordmark', image_url: 'https://placehold.co/400x200/F5F5F5/0F0F0F?text=BRAND&font=playfair', model_used: 'SDXL' },
+    { id: 'logo-1', style: 'monogram', image_url: 'https://placehold.co/400x400/0F0F0F/C6A96B?text=B&font=playfair', model_used: 'SD3' },
+    { id: 'logo-2', style: 'symbol',   image_url: 'https://placehold.co/400x400/0F0F0F/F5F5F5?text=✧&font=inter', model_used: 'SD3' },
+    { id: 'logo-3', style: 'wordmark', image_url: 'https://placehold.co/400x200/F5F5F5/0F0F0F?text=BRAND&font=playfair', model_used: 'SD3' },
   ],
   color_palettes: [
     {

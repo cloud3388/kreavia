@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { User, CreditCard, Bell, Shield, LogOut, Palette, Type, Save, RotateCcw, Check, Sparkles, ExternalLink, RefreshCw, Crown } from 'lucide-react';
-import { generateBrandKit as generateBrandIdentity } from '../../ai/pipeline';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { getUserSubscription } from '../../services/userService';
@@ -53,7 +52,11 @@ const SettingsPage = () => {
 
       // If no data or partial data, fetch mock defaults and merge
       if (!data || !data.brandArchetype || !data.colors) {
-        const fallbackData = await generateBrandIdentity({});
+        const fallbackData = {
+          colors: { primary: '#1A1A1A', secondary: '#FBFBFD', accent: '#C6A96B', highlight: '#F5F5F7' },
+          typography: { headline: 'Playfair Display', body: 'Inter' },
+          brandArchetype: 'The Visionary'
+        };
         data = {
           ...fallbackData,
           ...data,
