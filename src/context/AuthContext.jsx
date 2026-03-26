@@ -9,6 +9,10 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
     if (isMockMode) {
+      // In production, only allow mock session if explicitly enabled via VITE_USE_MOCK_AUTH
+      if (import.meta.env.PROD && import.meta.env.VITE_USE_MOCK_AUTH !== 'true') {
+        return null;
+      }
       const saved = localStorage.getItem('brankit_mock_user');
       return saved ? JSON.parse(saved) : null;
     }
@@ -50,7 +54,14 @@ export const AuthProvider = ({ children }) => {
 
   const signIn = async (email, password) => {
     if (isMockMode) {
-      const mockUser = { id: 'mock-uuid-123', email, user_metadata: { full_name: 'Mock User' } };
+      const mockUser = { 
+        id: 'mock-uuid-123', 
+        email, 
+        user_metadata: { 
+          full_name: 'Mock User (Development)',
+          avatar_url: 'https://i.pravatar.cc/150?u=mock' 
+        } 
+      };
       localStorage.setItem('brankit_mock_user', JSON.stringify(mockUser));
       setUser(mockUser);
       return { data: { user: mockUser }, error: null };

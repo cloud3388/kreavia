@@ -10,7 +10,7 @@ const SignUpPage = () => {
   const [loadingYahoo, setLoadingYahoo] = useState(false);
   const [honeypot, setHoneypot] = useState('');
   
-  const { signInWithGoogle, signInWithMicrosoft, signInWithYahoo } = useAuth();
+  const { user, loading, signInWithGoogle, signInWithMicrosoft, signInWithYahoo } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
