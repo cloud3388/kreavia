@@ -9,7 +9,7 @@
  *   NVIDIA_API_KEY=nvapi-xxxxxxxxxxxx  (set in Vercel dashboard, NOT prefixed with VITE_)
  */
 
-const NVIDIA_API_URL = 'https://ai.api.nvidia.com/v1/genai/stabilityai/stable-diffusion-xl';
+const NVIDIA_API_URL = 'https://ai.api.nvidia.com/v1/genai/stabilityai/stable-diffusion-3-medium';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', true);
