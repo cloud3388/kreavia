@@ -25,7 +25,24 @@ const AuthCallbackPage = () => {
                 const firstName = fullName.split(' ')[0];
                 const avatarUrl = user.user_metadata?.avatar_url || user.user_metadata?.picture || null;
 
-                // 2. Sync user profile using UPSERT (Avoids 23505 duplicate key errors)
+                // 2. Check if user already exists (to detect new vs existing)
+                const { data: existingUser } = await supabase
+                    .from('users')
+                    .select('id')
+                    .eq('id', user.id)
+                    .maybeSingle();
+
+                const urlParams = new URLSearchParams(window.location.search);
+                const authContext = urlParams.get('context') || 'login';
+                const isNewUser = !existingUser;
+
+                if (isNewUser && authContext === 'login') {
+                    console.log('New user detected during login flow. Redirecting to signup.');
+                    navigate('/signup?error=not_registered', { replace: true });
+                    return;
+                }
+
+                // 3. Sync user profile using UPSERT
                 setStatus('Syncing your profile...');
                 const uniqueUsername = `${firstName.toLowerCase()}${Math.floor(Math.random() * 10000)}`;
                 
@@ -41,17 +58,17 @@ const AuthCallbackPage = () => {
                         last_seen: new Date().toISOString()
                     }, { 
                         onConflict: 'id', 
-                        ignoreDuplicates: false // We want last_seen to update
+                        ignoreDuplicates: false 
                     });
 
                 if (upsertError) throw upsertError;
 
-                // 3. Ensure auth metadata is updated (Non-blocking)
+                // 4. Ensure auth metadata is updated (Non-blocking)
                 supabase.auth.updateUser({
                     data: { first_name: firstName, avatar_url: avatarUrl }
                 }).catch(() => {});
 
-                // 4. Decide where to go based on Projects
+                // 5. Decide where to go based on Projects
                 setStatus('Loading your workspace...');
                 const { data: project } = await supabase
                     .from('projects')

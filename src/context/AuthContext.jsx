@@ -78,13 +78,13 @@ export const AuthProvider = ({ children }) => {
     return await supabase.auth.signOut();
   };
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = async (context = 'login') => {
     if (isMockMode) {
       return signIn('google-user@example.com', 'dummy');
     }
     const redirectUrl = window.location.hostname === 'localhost' 
-      ? `${window.location.origin}/auth/callback` 
-      : 'https://kreavia.app/auth/callback';
+      ? `${window.location.origin}/auth/callback?context=${context}` 
+      : `https://kreavia.app/auth/callback?context=${context}`;
 
     return await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -94,13 +94,13 @@ export const AuthProvider = ({ children }) => {
     });
   };
 
-  const signInWithMicrosoft = async () => {
+  const signInWithMicrosoft = async (context = 'login') => {
     if (isMockMode) {
       return signIn('microsoft-user@example.com', 'dummy');
     }
     const redirectUrl = window.location.hostname === 'localhost' 
-      ? `${window.location.origin}/auth/callback` 
-      : 'https://kreavia.app/auth/callback';
+      ? `${window.location.origin}/auth/callback?context=${context}` 
+      : `https://kreavia.app/auth/callback?context=${context}`;
 
     return await supabase.auth.signInWithOAuth({
       provider: 'azure',
@@ -110,13 +110,13 @@ export const AuthProvider = ({ children }) => {
     });
   };
 
-  const signInWithYahoo = async () => {
+  const signInWithYahoo = async (context = 'login') => {
     if (isMockMode) {
       return signIn('yahoo-user@example.com', 'dummy');
     }
     const redirectUrl = window.location.hostname === 'localhost' 
-      ? `${window.location.origin}/auth/callback` 
-      : 'https://kreavia.app/auth/callback';
+      ? `${window.location.origin}/auth/callback?context=${context}` 
+      : `https://kreavia.app/auth/callback?context=${context}`;
 
     return await supabase.auth.signInWithOAuth({
       provider: 'workos', // fallback as per config

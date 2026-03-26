@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { UserPlus, AlertCircle } from 'lucide-react';
+import logo from '../../assets/logo.png';
 
 const SignUpPage = () => {
   const [error, setError] = useState('');
@@ -45,7 +46,7 @@ const SignUpPage = () => {
     try {
       setLoadingGoogle(true);
       setError('');
-      const { error } = await signInWithGoogle();
+      const { error } = await signInWithGoogle('signup');
       if (error) throw error;
       // AuthCallbackPage will handle navigation
     } catch (err) {
@@ -60,7 +61,7 @@ const SignUpPage = () => {
     try {
       setLoadingMicrosoft(true);
       setError('');
-      const { error } = await signInWithMicrosoft();
+      const { error } = await signInWithMicrosoft('signup');
       if (error) throw error;
       // AuthCallbackPage will handle navigation
     } catch (err) {
@@ -75,7 +76,7 @@ const SignUpPage = () => {
     try {
       setLoadingYahoo(true);
       setError('');
-      const { error } = await signInWithYahoo();
+      const { error } = await signInWithYahoo('signup');
       if (error) throw error;
       // AuthCallbackPage will handle navigation
     } catch (err) {
@@ -174,6 +175,11 @@ const SignUpPage = () => {
         </div>
 
         <p className="text-center mt-8 text-sm text-muted">
+          Already have an account?{' '}
+          <Link to="/login" className="text-accent hover:underline font-bold">Log In</Link>
+        </p>
+
+        <p className="text-center mt-4 text-xs text-muted/60">
           We only use your email to create your account. We never post or share anything.
         </p>
       </div>

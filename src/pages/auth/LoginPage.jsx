@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { AlertCircle } from 'lucide-react';
 import logo from '../../assets/logo.png';
@@ -17,12 +17,21 @@ const LoginPage = () => {
   const from = location.state?.from?.pathname || '/dashboard';
   const context = location.state?.context || 'login';
 
-  // THING 2: Fix the login page redirect immediately if session exists
+  // Redirect logged in users immediately
   useEffect(() => {
     if (user && !loading) {
       navigate('/dashboard', { replace: true });
     }
   }, [user, loading, navigate]);
+
+  // Handle specific auth errors from URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const errorParam = params.get('error');
+    if (errorParam === 'not_registered') {
+      setError('Account not found. Please sign up first.');
+    }
+  }, []);
 
   let subtitle = 'Welcome back. Sign in to continue';
   if (context === 'get_started') {
@@ -47,7 +56,7 @@ const LoginPage = () => {
     try {
       setLoadingGoogle(true);
       setError('');
-      const { error } = await signInWithGoogle();
+      const { error } = await signInWithGoogle('login');
       if (error) throw error;
       // AuthCallbackPage will handle navigation
     } catch (err) {
@@ -61,7 +70,7 @@ const LoginPage = () => {
     try {
       setLoadingMicrosoft(true);
       setError('');
-      const { error } = await signInWithMicrosoft();
+      const { error } = await signInWithMicrosoft('login');
       if (error) throw error;
       // AuthCallbackPage will handle navigation
     } catch (err) {
@@ -75,7 +84,7 @@ const LoginPage = () => {
     try {
       setLoadingYahoo(true);
       setError('');
-      const { error } = await signInWithYahoo();
+      const { error } = await signInWithYahoo('login');
       if (error) throw error;
       // AuthCallbackPage will handle navigation
     } catch (err) {
@@ -162,6 +171,11 @@ const LoginPage = () => {
         </div>
 
         <p className="text-center mt-8 text-sm text-muted">
+          Don't have an account?{' '}
+          <Link to="/signup" className="text-accent hover:underline font-bold">Sign Up</Link>
+        </p>
+
+        <p className="text-center mt-4 text-xs text-muted/60">
           We only use your email to create your account. We never post or share anything.
         </p>
       </div>
