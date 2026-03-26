@@ -139,8 +139,9 @@ export default async function handler(req, res) {
     `.trim();
   }
 
-  try {
-    const groqRes = await fetch(GROQ_TEXT_URL, {
+  // Helper to call Groq with a specific model
+  const callGroq = async (model, promptString) => {
+    const response = await fetch(GROQ_TEXT_URL, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -148,17 +149,33 @@ export default async function handler(req, res) {
         'Accept':        'application/json',
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: [{ role: 'user', content: prompt }],
+        model: model,
+        messages: [{ role: 'user', content: promptString }],
         temperature: 1,
         top_p: 1,
         max_tokens: 1024,
       }),
     });
+    return response;
+  };
+
+  try {
+    let groqRes = await callGroq('llama-3.3-70b-versatile', prompt);
+    let usedFallback = false;
+
+    // Handle Rate Limit (429) by falling back to a faster model
+    if (groqRes.status === 429) {
+      console.warn('[ai-text] Primary model rate limited (429). Falling back to llama-3.1-8b-instant.');
+      groqRes = await callGroq('llama-3.1-8b-instant', prompt);
+      usedFallback = true;
+    }
 
     if (!groqRes.ok) {
       const err = await groqRes.json().catch(() => ({}));
-      return res.status(groqRes.status).json({ error: `Groq API error: ${err.error?.message || groqRes.statusText}` });
+      return res.status(groqRes.status).json({ 
+        error: `Groq API error (${groqRes.status}): ${err.error?.message || groqRes.statusText}`,
+        fallback_used: usedFallback
+      });
     }
 
     const data = await groqRes.json();
@@ -168,7 +185,10 @@ export default async function handler(req, res) {
     const jsonMatch = content.match(/(\[[\s\S]*\]|\{[\s\S]*\})/);
     const result = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(content);
 
-    return res.status(200).json(result);
+    return res.status(200).json({
+      ...result,
+      _meta: { fallback_used: usedFallback }
+    });
   } catch (err) {
     console.error('[ai-text] Error:', err.message);
     return res.status(500).json({ error: err.message });
