@@ -5,6 +5,7 @@ import { Sparkles, Palette, Type, Layout, Zap, CheckCircle2 } from 'lucide-react
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import logo from '../assets/logo.png';
+import FeedbackSection from '../components/FeedbackSection';
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -194,6 +195,8 @@ const LandingPage = () => {
          
          <PricingCards onAction={handlePricingAction} />
        </section>
+
+       <FeedbackSection id="feedback" />
     </div>
   );
 };

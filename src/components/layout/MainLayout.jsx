@@ -49,6 +49,19 @@ const MainLayout = () => {
           >
             Pricing
           </button>
+          <button 
+            onClick={() => {
+              if (window.location.pathname !== '/') {
+                navigate('/');
+                setTimeout(() => document.getElementById('feedback')?.scrollIntoView({ behavior: 'smooth' }), 100);
+              } else {
+                document.getElementById('feedback')?.scrollIntoView({ behavior: 'smooth' });
+              }
+            }}
+            className="text-muted hover:text-accent text-sm font-black uppercase tracking-widest transition-colors px-2"
+          >
+            Feedback
+          </button>
           
           {user ? (
             <div className="flex items-center gap-6">
