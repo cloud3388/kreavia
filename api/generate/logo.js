@@ -3,84 +3,91 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { dna, palette } = req.body;
+  const { dna, palette, isAlternative } = req.body;
   if (!dna || !palette) {
     return res.status(400).json({ error: 'Missing dna or palette' });
-  }
-
-  const nvidKey = process.env.VITE_NVIDIA_API_KEY || process.env.NVIDIA_API_KEY;
-  if (!nvidKey) {
-    return res.status(500).json({ error: 'Missing NVIDIA API Key' });
   }
 
   const primary = palette.primary || '#1A1A1A';
   const accent = palette.accent || '#C6A96B';
   const name = dna.brand_name || 'Brand';
-  
-  // Single crisp prompt for a high-end monogram or symbol logo
-  const prompt = `A luxury minimalist logo design for ${name}. Niche: ${dna.niche}. 
-Features a sleek monogram or abstract geometric symbol centered on a solid ${primary} background. 
-The logo mark itself should be a luxurious ${accent} color. 
-Vector art, flat design, perfectly symmetrical, whitespace, extremely premium, corporate identity, Dribbble aesthetic.`;
+  const fallbackResponse = {
+    logos: [
+      { 
+         style: 'symbol', 
+         url: `https://placehold.co/400x400/${primary.replace('#', '')}/${accent.replace('#', '')}?text=${name[0].toUpperCase()}&font=playfair`,
+         model_used: 'fallback'
+      }
+    ]
+  };
+
+  const recraftKey = process.env.VITE_RECRAFT_API_KEY || process.env.RECRAFT_API_KEY;
+  if (!recraftKey) {
+    console.error('[logo-gen] Missing Recraft API Key');
+    return res.status(200).json(fallbackResponse);
+  }
+
+  let prompt = `Minimal professional logo mark icon for a brand called ${name} in the ${dna.niche} space. Style: ${dna.style}. Target audience: ${dna.audience}.
+
+Design direction based on style:
+- If style is Luxury: elegant monogram or abstract geometric mark, thin lines, sophisticated, timeless
+- If style is Minimal: clean simple icon, single shape, lots of negative space, modern and flat
+- If style is Bold: strong geometric shape, thick strokes, high contrast, powerful
+- If style is Playful: rounded friendly icon, soft curves, approachable, fun
+- If style is Dark Aesthetic: sleek dark icon, mysterious, editorial, sharp edges
+
+The logo must be:
+- A symbol or icon mark only
+- No text or brand name inside the image
+- Single color on white background
+- Clean vector style
+- Scalable and professional
+- Centered on white canvas
+- Suitable for Instagram profile picture`;
+
+  if (isAlternative) {
+    prompt += '\n\nAlternative concept, different approach, unique interpretation';
+  }
 
   try {
-    const response = await fetch('https://ai.api.nvidia.com/v1/genai/stabilityai/stable-diffusion-3-medium', {
+    const response = await fetch('https://external.api.recraft.ai/v1/images/generations', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${nvidKey}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
+        'Authorization': `Bearer ${recraftKey}`,
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         prompt: prompt,
-        negative_prompt: '3d, detailed, realistic, photography, shadows, gradients, mockup, text, watermark, messy, uneven, noise',
-        cfg_scale: 8,
-        steps: 28,
-        aspect_ratio: '1:1',
+        model: 'recraft-v3',
+        style: 'vector_illustration',
+        size: '1024x1024'
       }),
     });
 
     if (!response.ok) {
       const err = await response.text();
-      console.error('[logo-gen] NVIDIA Error:', err);
-      // Fallback response so frontend doesn't break
-      return res.status(200).json({
-        logos: [
-          { 
-             style: 'symbol', 
-             url: `https://placehold.co/400x400/${primary.replace('#', '')}/${accent.replace('#', '')}?text=${name[0].toUpperCase()}&font=playfair`,
-             model_used: 'fallback'
-          }
-        ]
-      });
+      console.error('[logo-gen] Recraft Error:', err);
+      return res.status(200).json(fallbackResponse);
     }
 
     const data = await response.json();
-    const base64Image = data.artifacts?.[0]?.base64;
+    const imageUrl = data.data?.[0]?.url;
     
-    if (base64Image) {
+    if (imageUrl) {
       return res.status(200).json({
         logos: [
           {
             style: 'symbol',
-            url: `data:image/png;base64,${base64Image}`,
-            model_used: 'nvidia-sd3'
+            url: imageUrl,
+            model_used: 'recraft-v3'
           }
         ]
       });
     }
 
-    throw new Error('No image returned');
+    throw new Error('No image returned from Recraft');
   } catch (error) {
     console.error('[logo-gen] Failed:', error);
-    return res.status(200).json({
-      logos: [
-        { 
-           style: 'symbol', 
-           url: `https://placehold.co/400x400/${primary.replace('#', '')}/${accent.replace('#', '')}?text=${name[0].toUpperCase()}&font=playfair`,
-           model_used: 'fallback'
-        }
-      ]
-    });
+    return res.status(200).json(fallbackResponse);
   }
 }

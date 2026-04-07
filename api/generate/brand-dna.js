@@ -78,6 +78,10 @@ Output ONLY valid JSON matching this exact structure:
     const jsonMatch = content.match(/\{[\s\S]*\}/);
     const result = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(content);
     
+    // We strictly enforce the font mappings using our internal robust utility
+    const { pickFonts } = await import('../../src/utils/typographyLogic.js');
+    result.typography = pickFonts(dna.style);
+    
     // Add quality score for parity with old pipeline
     result.quality_score = 92;
 

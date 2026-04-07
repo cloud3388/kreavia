@@ -8,6 +8,7 @@ export const PLAN_LIMITS = {
     maxBrands: 1,
     maxTemplateExports: 3,
     maxGenerationsPerMonth: 3,
+    maxLogoRegens: 3,
     visibleHooks: 3,
     captionVariations: ['short'],
     hasWatermark: true,
@@ -24,6 +25,7 @@ export const PLAN_LIMITS = {
     maxBrands: 5,
     maxTemplateExports: Infinity,
     maxGenerationsPerMonth: Infinity,
+    maxLogoRegens: Infinity,
     visibleHooks: Infinity,
     captionVariations: ['short', 'medium', 'story'],
     hasWatermark: false,
@@ -84,4 +86,17 @@ export const getExportLimitInfo = () => {
     total: status.maxTemplateExports,
     remaining: status.maxTemplateExports === Infinity ? Infinity : Math.max(0, status.maxTemplateExports - count)
   };
+};
+
+export const getRemainingLogoRegens = () => {
+  const status = getPlanStatus();
+  if (status.maxLogoRegens === Infinity) return Infinity;
+  
+  const used = parseInt(localStorage.getItem('kreavia_logo_regen_count') || '0', 10);
+  return Math.max(0, status.maxLogoRegens - used);
+};
+
+export const incrementLogoRegenCount = () => {
+  const used = parseInt(localStorage.getItem('kreavia_logo_regen_count') || '0', 10);
+  localStorage.setItem('kreavia_logo_regen_count', (used + 1).toString());
 };

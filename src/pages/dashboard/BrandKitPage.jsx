@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Palette, Type, Image as ImageIcon, CheckCircle, Sparkles, AlertCircle, Download, FileText, Share2, Check as CheckIcon, MoreVertical, Plus, Edit, Trash, Copy, Copy as CopyIcon, History, RotateCcw, Lock, Crown } from 'lucide-react';
+import { Palette, Type, Image as ImageIcon, CheckCircle, Sparkles, AlertCircle, Download, FileText, Share2, Check as CheckIcon, MoreVertical, Plus, Edit, Trash, Copy, Copy as CopyIcon, History, RotateCcw, Lock, Crown, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import logoAsset from '../../assets/logo.png';
@@ -17,7 +17,9 @@ import {
   isFeatureLocked, 
   getRemainingGenerations, 
   incrementGenerationCount, 
-  getPlanStatus 
+  getPlanStatus,
+  getRemainingLogoRegens,
+  incrementLogoRegenCount
 } from '../../utils/planPermissions';
 
 const BrandKitPage = () => {
@@ -42,6 +44,7 @@ const BrandKitPage = () => {
   const [selectedVersion, setSelectedVersion] = useState(null);
   const [isComparing, setIsComparing] = useState(false);
   const [showLogoEditor, setShowLogoEditor] = useState(false);
+  const [isRegeneratingLogo, setIsRegeneratingLogo] = useState(false);
 
   const handleShare = (e) => {
     if (isFeatureLocked('shareLink')) {
@@ -458,6 +461,76 @@ const BrandKitPage = () => {
     setIsComparing(false);
   };
 
+  const handleRefineFonts = async () => {
+    if (!brandData) return;
+    const { pickFonts } = await import('../../utils/typographyLogic');
+    
+    // Pick new fonts excluding current ones
+    const newFonts = pickFonts(brandData.dna?.style || 'minimal', brandData.typography || {});
+    
+    // Update local state & storage
+    const updatedKit = {
+      ...brandData,
+      typography: {
+        ...(brandData.typography || {}),
+        ...newFonts
+      }
+    };
+    
+    setBrandData(updatedKit);
+    sessionStorage.setItem('currentBrandKit', JSON.stringify(updatedKit));
+    await saveBrand(updatedKit);
+    const brands = await getBrands();
+    setUserBrands(brands);
+    window.dispatchEvent(new Event('kreavia_brands_updated'));
+  };
+  const handleRegenerateLogo = async () => {
+    const remaining = getRemainingLogoRegens();
+    if (remaining <= 0) {
+      alert("Upgrade to Pro for unlimited logo regenerations");
+      setShowProModal(true);
+      return;
+    }
+    if (!brandData?.dna) return;
+    
+    setIsRegeneratingLogo(true);
+    try {
+      const response = await fetch('/api/generate/logo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          dna: brandData.dna, 
+          palette: brandData.colors,
+          isAlternative: true 
+        })
+      });
+      
+      if (!response.ok) throw new Error("Failed to generate logo");
+      const data = await response.json();
+      
+      if (data.logos && data.logos.length > 0) {
+        incrementLogoRegenCount();
+        const updatedKit = {
+          ...brandData,
+          logos: [data.logos[0], ...(brandData.logos || []).slice(1)]
+        };
+        
+        setBrandData(updatedKit);
+        sessionStorage.setItem('currentBrandKit', JSON.stringify(updatedKit));
+        const { saveBrand, getBrands } = await import('../../utils/storage');
+        await saveBrand(updatedKit);
+        const brands = await getBrands();
+        setUserBrands(brands);
+        window.dispatchEvent(new Event('kreavia_brands_updated'));
+      }
+    } catch(err) {
+      console.error(err);
+      alert("Failed to regenerate logo. Please try again.");
+    } finally {
+      setIsRegeneratingLogo(false);
+    }
+  };
+
   return (
     <motion.div 
       variants={containerVariants}
@@ -727,6 +800,9 @@ const BrandKitPage = () => {
                  <h3 className="text-2xl font-headline text-primary font-bold">Official Marks</h3>
                </div>
                <div className="flex items-center gap-3">
+                  <button onClick={handleRegenerateLogo} disabled={isRegeneratingLogo} className="text-[10px] font-bold text-primary uppercase tracking-widest hover:text-accent transition-colors border-b border-primary/20 pb-1 flex items-center gap-1">
+                    <RefreshCw size={12} className={isRegeneratingLogo ? "animate-spin" : ""} /> Regenerate Logo
+                  </button>
                   <button onClick={() => setShowLogoEditor(true)} className="text-[10px] font-bold text-primary uppercase tracking-widest hover:text-accent transition-colors border-b border-primary/20 pb-1 flex items-center gap-1">
                     <Edit size={12} /> Edit Logo
                   </button>
@@ -737,20 +813,33 @@ const BrandKitPage = () => {
                 </div>
              </div>
              
-             <div className="glass-card flex flex-col items-center justify-center relative group overflow-hidden border-light h-[280px] bg-white shadow-lg">
+             <div className="glass-card flex flex-col items-center justify-center relative group overflow-hidden border-light h-[320px] bg-white shadow-lg pb-12">
                  <div className="absolute inset-0 bg-accent/5 opacity-0 group-hover:opacity-100 transition-all duration-700"></div>
                  <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
                     <div className="p-2 rounded-full bg-surface shadow-md cursor-help" title="High Resolution PNG">
                        < ImageIcon size={14} className="text-accent" />
                     </div>
                  </div>
-                 <img 
-                   src={brandData?.logos?.[0]?.url || brandData?.logo || logoAsset} 
-                   alt="Primary Logo" 
-                   className="w-48 h-48 object-contain drop-shadow-2xl group-hover:scale-105 transition-transform duration-700 rounded-xl mix-blend-multiply" 
-                 />
+                 {isRegeneratingLogo ? (
+                   <div className="w-36 h-36 flex items-center justify-center bg-surface/50 rounded-xl mb-4">
+                     <div className="w-8 h-8 border-2 border-light border-t-accent rounded-full animate-spin"></div>
+                   </div>
+                 ) : (
+                   <img 
+                     src={brandData?.logos?.[0]?.url || brandData?.logo || logoAsset} 
+                     alt="Primary Logo" 
+                     className="w-36 h-36 object-contain drop-shadow-2xl group-hover:scale-105 transition-transform duration-700 rounded-xl mix-blend-multiply" 
+                   />
+                 )}
                  
-                 <div className="absolute inset-x-0 bottom-0 p-6 flex gap-3 h-20 bg-gradient-to-t from-primary to-transparent backdrop-blur-md border-t border-white/5">
+                 <div 
+                   style={{ fontFamily: brandData?.typography?.headline || 'inherit' }} 
+                   className="mt-4 text-3xl font-bold tracking-tight text-primary z-10 relative drop-shadow-sm text-center px-4"
+                 >
+                   {brandData?.dna?.brand_name || brandData?.brandName || 'Brand Name'}
+                 </div>
+                 
+                 <div className="absolute inset-x-0 bottom-0 p-6 flex gap-3 h-20 bg-gradient-to-t from-primary to-transparent backdrop-blur-md border-t border-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                     <a 
                       href={brandData?.logos?.[0]?.url || brandData?.logo || logoAsset} 
                       download="Brand-Logo.png"
@@ -820,11 +909,19 @@ const BrandKitPage = () => {
 
           {/* Type Row */}
           <motion.div variants={itemVariants} className="lg:col-span-8 flex flex-col gap-6 mt-4">
-             <div className="flex items-center gap-3 mb-2 px-2">
-               <div className="p-2.5 rounded-xl bg-accent/10 text-accent shadow-inner">
-                 <Type size={22} strokeWidth={2.5} />
+             <div className="flex items-center justify-between px-2">
+               <div className="flex items-center gap-3 mb-2">
+                 <div className="p-2.5 rounded-xl bg-accent/10 text-accent shadow-inner">
+                   <Type size={22} strokeWidth={2.5} />
+                 </div>
+                 <h3 className="text-2xl font-headline text-primary font-bold">Typographic Pairing</h3>
                </div>
-               <h3 className="text-2xl font-headline text-primary font-bold">Typographic Pairing</h3>
+               <button 
+                 onClick={handleRefineFonts}
+                 className="text-[10px] font-bold text-accent uppercase tracking-widest hover:text-primary transition-colors border-b border-accent/20 pb-1 flex items-center gap-1 mb-2"
+               >
+                 <Sparkles size={12} /> Refine Identity
+               </button>
              </div>
              
              <div className="glass-card p-10 border-accent/10 flex flex-col md:grid md:grid-cols-12 gap-10 min-h-[340px] bg-surface relative overflow-hidden shadow-xl">
@@ -833,15 +930,15 @@ const BrandKitPage = () => {
                  <div className="md:col-span-4 flex flex-col justify-center gap-10 pr-6 relative z-10">
                     <div className="group cursor-default">
                       <div className="text-accent text-[9px] font-black uppercase tracking-[0.2em] mb-2.5 opacity-60">Headline</div>
-                      <div className="font-headline text-3xl text-primary font-bold leading-tight group-hover:text-accent transition-colors">{brandData?.typography?.headline || 'Playfair Display'}</div>
+                      <div className="font-headline text-3xl text-primary font-bold leading-tight group-hover:text-accent transition-colors" style={{ fontFamily: brandData?.typography?.headline || 'Playfair Display' }}>{brandData?.typography?.headline || 'Playfair Display'}</div>
                     </div>
                     <div className="group cursor-default">
                       <div className="text-accent text-[9px] font-black uppercase tracking-[0.2em] mb-2.5 opacity-60">Body Narrative</div>
-                      <div className="font-body text-xl text-primary/80 leading-relaxed font-medium">{brandData?.typography?.body || 'Inter'}</div>
+                      <div className="font-body text-xl text-primary/80 leading-relaxed font-medium" style={{ fontFamily: brandData?.typography?.body || 'Inter' }}>{brandData?.typography?.body || 'Inter'}</div>
                     </div>
                     <div className="group cursor-default">
                       <div className="text-accent text-[9px] font-black uppercase tracking-[0.2em] mb-2.5 opacity-60">Functional Interface</div>
-                      <div className="font-ui text-md text-primary/50 tracking-wide font-bold">{brandData?.typography?.ui || 'Satoshi'}</div>
+                      <div className="font-ui text-md text-primary/50 tracking-wide font-bold" style={{ fontFamily: brandData?.typography?.ui || 'Satoshi' }}>{brandData?.typography?.ui || 'Satoshi'}</div>
                     </div>
                  </div>
   

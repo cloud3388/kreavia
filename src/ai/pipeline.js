@@ -40,6 +40,7 @@ import {
 } from './validators';
 import { getCached, setCached, clearL1Cache } from './cache';
 import { generateLogoVariations } from '../services/nvidiaService';
+import { pickFonts } from '../utils/typographyLogic';
 
 // ──────────────────────────────────────────
 // Model tier assignment
@@ -327,6 +328,10 @@ export const generateStep1DNA = async (dna) => {
     const content = data.choices[0].message.content;
     const jsonMatch = content.match(/\{[\s\S]*\}/);
     const result = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(content);
+    
+    // Override generated typography intelligently
+    result.typography = pickFonts(dna.style);
+    
     return { ...result, quality_score: 92 };
   }
 };
