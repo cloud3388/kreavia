@@ -367,14 +367,13 @@ export const generateStep2Logo = async (dna, palette) => {
     else if (styleStr.includes('playful')) prompt += ' rounded corners, friendly curves, soft approachable design';
     else if (styleStr.includes('dark aesthetic')) prompt += ' sleek sharp edges, mysterious, editorial, dark energy';
 
-    const response = await fetch('/nvidia-api/v1/genai/black-forest-labs/flux-1-dev', {
+    const response = await fetch('/nvidia-api/v1/genai/black-forest-labs/flux-2-klein-4b', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${NVIDIA_KEY}`, 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: JSON.stringify({
         prompt: prompt,
-        width: 1024, height: 1024, num_inference_steps: 30, guidance_scale: 7.5,
+        width: 1024, height: 1024, num_inference_steps: 4, guidance_scale: 3.5,
         seed: Math.floor(Math.random() * 9999) + 1,
-        negative_prompt: 'text, letters, words, brand name, typography, font, alphabet, watermark, signature, blurry, low quality, realistic photo, human face, people'
       }),
     });
     const data = await response.json();
@@ -383,7 +382,7 @@ export const generateStep2Logo = async (dna, palette) => {
     else if (data.image) base64Image = data.image;
 
     if (base64Image) {
-      return { logos: [{ style: 'symbol', url: `data:image/png;base64,${base64Image}`, model_used: 'flux.1-dev' }] };
+      return { logos: [{ style: 'symbol', url: `data:image/png;base64,${base64Image}`, model_used: 'flux.2-klein-4b' }] };
     }
     throw new Error('NVIDIA Image failed');
   }

@@ -83,12 +83,8 @@ export default async function handler(req, res) {
   const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
   try {
-    // 4. Generate Image via Nvidia Flux.1-Dev API
-    // (Note: The user provided https://build.nvidia.com/black-forest-labs/flux_2-klein_4b but the standard dev endpoint is https://ai.api.nvidia.com/v1/genai/black-forest-labs/flux-1-dev)
-    const apiUrl = 'https://ai.api.nvidia.com/v1/genai/black-forest-labs/flux-1-dev';
-    
-    // Fallback if the user explicitly created a local dev proxy match
-    // For now we will use the standard Flux 1 dev integration on Nvidia
+    // Generate Image via NVIDIA NIM — Flux.2 Klein 4B (faster, cheaper than flux-1-dev)
+    const apiUrl = 'https://ai.api.nvidia.com/v1/genai/black-forest-labs/flux-2-klein-4b';
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
@@ -100,23 +96,16 @@ export default async function handler(req, res) {
         prompt: prompt,
         width: 1024,
         height: 1024,
-        num_inference_steps: 30,
-        guidance_scale: 7.5,
+        num_inference_steps: 4,
+        guidance_scale: 3.5,
         seed: Math.floor(Math.random() * 9999) + 1,
-        negative_prompt: "text, letters, words, brand name, typography, font, alphabet, watermark, signature, blurry, low quality, realistic photo, human face, people"
       }),
     });
 
     if (!response.ok) {
       const err = await response.text();
-      console.error('[logo-gen] NVIDIA Flux Error:', err);
-      // Attempt alternative endpoint if user's prompt string was literally an endpoint
-      if (err.includes('404')) {
-         console.warn("[logo-gen] trying alternative user string endpoint");
-         // fallthrough to catch
-      } else {
-         return res.status(200).json(fallbackResponse); 
-      }
+      console.error('[logo-gen] NVIDIA Flux Klein Error:', err);
+      return res.status(200).json(fallbackResponse);
     }
 
     const data = await response.json();
@@ -191,7 +180,7 @@ export default async function handler(req, res) {
         {
           style: 'symbol',
           url: finalLogoUrl,
-          model_used: 'flux.1-dev'
+          model_used: 'flux.2-klein-4b'
         }
       ]
     });
