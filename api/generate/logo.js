@@ -24,9 +24,9 @@ export default async function handler(req, res) {
     ]
   };
 
-  const nvidiaKey = process.env.NVIDIA_API_KEY;
+  const nvidiaKey = process.env.NVIDIA_API_KEY || process.env.VITE_NVIDIA_API_KEY;
   if (!nvidiaKey) {
-    console.error('[logo-gen] Missing NVIDIA_API_KEY in environment');
+    console.error('[logo-gen] Missing NVIDIA_API_KEY or VITE_NVIDIA_API_KEY in environment');
     return res.status(200).json(fallbackResponse);
   }
 

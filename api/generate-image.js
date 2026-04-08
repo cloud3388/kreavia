@@ -26,10 +26,10 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const apiKey = process.env.NVIDIA_API_KEY;
+  const apiKey = process.env.NVIDIA_API_KEY || process.env.VITE_NVIDIA_API_KEY;
   if (!apiKey || apiKey.startsWith('nvapi-YOUR')) {
     return res.status(500).json({ 
-      error: 'NVIDIA_API_KEY not configured in Vercel environment.' 
+      error: 'NVIDIA_API_KEY or VITE_NVIDIA_API_KEY not configured in Vercel environment.' 
     });
   }
 
