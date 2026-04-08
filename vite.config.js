@@ -84,6 +84,12 @@ function localApiPlugin() {
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), localApiPlugin()],
+  // Define process.env for browser-side code
+  define: {
+    'process.env.GROQ_API_KEY': JSON.stringify(process.env.GROQ_API_KEY),
+    'process.env.NVIDIA_API_KEY': JSON.stringify(process.env.NVIDIA_API_KEY),
+    'process.env.VITE_USE_AI_PROXY': JSON.stringify(process.env.VITE_USE_AI_PROXY || 'true')
+  },
   server: {
     proxy: {
       '/nvidia-api': {
