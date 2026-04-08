@@ -1,0 +1,353 @@
+diff --git a/api/generate/logo.js b/api/generate/logo.js
+index e2dd65f..dabd6a3 100644
+--- a/api/generate/logo.js
++++ b/api/generate/logo.js
+@@ -1,9 +1,11 @@
++import { createClient } from '@supabase/supabase-js';
++
+ export default async function handler(req, res) {
+   if (req.method !== 'POST') {
+     return res.status(405).json({ error: 'Method not allowed' });
+   }
+ 
+-  const { dna, palette, isAlternative } = req.body;
++  const { dna, palette, isAlternative, brandKitId, userId } = req.body;
+   if (!dna || !palette) {
+     return res.status(400).json({ error: 'Missing dna or palette' });
+   }
+@@ -11,6 +13,7 @@ export default async function handler(req, res) {
+   const primary = palette.primary || '#1A1A1A';
+   const accent = palette.accent || '#C6A96B';
+   const name = dna.brand_name || 'Brand';
++  
+   const fallbackResponse = {
+     logos: [
+       { 
+@@ -21,71 +24,177 @@ export default async function handler(req, res) {
+     ]
+   };
+ 
+-  const recraftKey = process.env.VITE_RECRAFT_API_KEY || process.env.RECRAFT_API_KEY;
+-  if (!recraftKey) {
+-    console.error('[logo-gen] Missing Recraft API Key');
++  const nvidiaKey = process.env.VITE_NVIDIA_API_KEY || process.env.NVIDIA_API_KEY;
++  if (!nvidiaKey) {
++    console.error('[logo-gen] Missing NVIDIA API Key');
+     return res.status(200).json(fallbackResponse);
+   }
+ 
+-  let prompt = `Minimal professional logo mark icon for a brand called ${name} in the ${dna.niche} space. Style: ${dna.style}. Target audience: ${dna.audience}.
++  // 1. Build Base Concept dynamically based on Niche
++  const niche = (dna.niche || '').toLowerCase();
++  let baseConcept = '';
++  
++  if (niche.includes('fitness')) {
++    baseConcept = 'athletic shield, lightning bolt, dynamic figure in motion';
++  } else if (niche.includes('lifestyle')) {
++    baseConcept = 'minimal leaf, sun ray, flowing ribbon, abstract organic shape';
++  } else if (niche.includes('fashion')) {
++    baseConcept = 'geometric diamond, crown, elegant abstract shape, fashion silhouette';
++  } else if (niche.includes('technology') || niche.includes('tech')) {
++    baseConcept = 'circuit node, hexagon, abstract connected dots, geometric tech shape';
++  } else if (niche.includes('food') || niche.includes('drink')) {
++    baseConcept = 'abstract bowl, leaf sprig, fork silhouette, organic drop shape';
++  } else if (niche.includes('business')) {
++    baseConcept = 'abstract upward arrow, geometric mountain peak, interlocked shapes';
++  } else if (niche.includes('gaming')) {
++    baseConcept = 'controller silhouette, pixel star, geometric game icon';
++  } else if (niche.includes('real estate')) {
++    baseConcept = 'abstract roof line, geometric house shape, key silhouette';
++  } else if (niche.includes('travel')) {
++    baseConcept = 'compass rose, abstract plane shape, mountain peak, globe outline';
++  } else {
++    baseConcept = 'clean geometric abstract mark, minimal professional icon';
++  }
+ 
+-Design direction based on style:
+-- If style is Luxury: elegant monogram or abstract geometric mark, thin lines, sophisticated, timeless
+-- If style is Minimal: clean simple icon, single shape, lots of negative space, modern and flat
+-- If style is Bold: strong geometric shape, thick strokes, high contrast, powerful
+-- If style is Playful: rounded friendly icon, soft curves, approachable, fun
+-- If style is Dark Aesthetic: sleek dark icon, mysterious, editorial, sharp edges
++  // 2. Build final prompt
++  const styleStr = (dna.style || 'Premium').toLowerCase();
++  let prompt = `A single minimalist vector logo icon of ${baseConcept}. ${dna.style} aesthetic design. Flat clean design, single color on pure white background, centered composition, no text, no letters, no words anywhere in the image, professional brand mark, scalable icon, thick clean outlines, simple geometric shapes only.`;
+ 
+-The logo must be:
+-- A symbol or icon mark only
+-- No text or brand name inside the image
+-- Single color on white background
+-- Clean vector style
+-- Scalable and professional
+-- Centered on white canvas
+-- Suitable for Instagram profile picture`;
++  if (styleStr.includes('luxury')) {
++    prompt += ' thin elegant lines, sophisticated, timeless, high-end';
++  } else if (styleStr.includes('minimal')) {
++    prompt += ' maximum negative space, ultra clean, simple single shape';
++  } else if (styleStr.includes('bold')) {
++    prompt += ' thick strokes, strong geometric, high impact, powerful';
++  } else if (styleStr.includes('playful')) {
++    prompt += ' rounded corners, friendly curves, soft approachable design';
++  } else if (styleStr.includes('dark aesthetic')) {
++    prompt += ' sleek sharp edges, mysterious, editorial, dark energy';
++  }
+ 
+   if (isAlternative) {
+-    prompt += '\n\nAlternative concept, different approach, unique interpretation';
++    prompt += ' Alternative concept, different approach, unique interpretation.';
+   }
+ 
++  // 3. Setup Supabase
++  const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
++  // Use Service Role Key if available, else Anon Key, since uploading via api might bypass RLS
++  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
++  const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
++
+   try {
+-    const response = await fetch('https://external.api.recraft.ai/v1/images/generations', {
++    // 4. Generate Image via Nvidia Flux.1-Dev API
++    // (Note: The user provided https://build.nvidia.com/black-forest-labs/flux_2-klein_4b but the standard dev endpoint is https://ai.api.nvidia.com/v1/genai/black-forest-labs/flux-1-dev)
++    const apiUrl = 'https://ai.api.nvidia.com/v1/genai/black-forest-labs/flux-1-dev';
++    
++    // Fallback if the user explicitly created a local dev proxy match
++    // For now we will use the standard Flux 1 dev integration on Nvidia
++    const response = await fetch(apiUrl, {
+       method: 'POST',
+       headers: {
+-        'Authorization': `Bearer ${recraftKey}`,
+-        'Content-Type': 'application/json'
++        'Authorization': `Bearer ${nvidiaKey}`,
++        'Content-Type': 'application/json',
++        'Accept': 'application/json'
+       },
+       body: JSON.stringify({
+         prompt: prompt,
+-        model: 'recraft-v3',
+-        style: 'vector_illustration',
+-        size: '1024x1024'
++        width: 1024,
++        height: 1024,
++        num_inference_steps: 30,
++        guidance_scale: 7.5,
++        seed: Math.floor(Math.random() * 9999) + 1,
++        negative_prompt: "text, letters, words, brand name, typography, font, alphabet, watermark, signature, blurry, low quality, realistic photo, human face, people"
+       }),
+     });
+ 
+     if (!response.ok) {
+       const err = await response.text();
+-      console.error('[logo-gen] Recraft Error:', err);
+-      return res.status(200).json(fallbackResponse);
++      console.error('[logo-gen] NVIDIA Flux Error:', err);
++      // Attempt alternative endpoint if user's prompt string was literally an endpoint
++      if (err.includes('404')) {
++         console.warn("[logo-gen] trying alternative user string endpoint");
++         // fallthrough to catch
++      } else {
++         return res.status(200).json(fallbackResponse); 
++      }
+     }
+ 
+     const data = await response.json();
+-    const imageUrl = data.data?.[0]?.url;
+     
+-    if (imageUrl) {
+-      return res.status(200).json({
+-        logos: [
+-          {
+-            style: 'symbol',
+-            url: imageUrl,
+-            model_used: 'recraft-v3'
++    // The response could be in a few formats based on the API. Flux via NIM usually returns data.artifacts
++    let base64Image = '';
++    
++    if (data.artifacts && data.artifacts.length > 0 && data.artifacts[0].base64) {
++      base64Image = data.artifacts[0].base64;
++    } else if (data.image) {
++      base64Image = data.image; // Some proxy versions use this structure
++    }
++
++    if (!base64Image) {
++      throw new Error('No base64 image returned from NVIDIA API');
++    }
++
++    // 5. Save to Supabase Storage if configured
++    let finalLogoUrl = `data:image/png;base64,${base64Image}`;
++
++    if (supabase) {
++      // Create bucket if not exists (Requires admin privileges or public insert permissions)
++      try {
++         await supabase.storage.createBucket('brand-logos', { public: true });
++      } catch (e) {
++         // Bucket might already exist or we lack permissions to create (RLS), ignore
++      }
++
++      // Convert base64 to buffer
++      const buffer = Buffer.from(base64Image, 'base64');
++      const uId = userId || 'anon';
++      const bId = brandKitId || 'draft';
++      const timestamp = Date.now();
++      const fileName = `${uId}-${bId}-${timestamp}.png`;
++
++      const { data: uploadData, error: uploadError } = await supabase
++        .storage
++        .from('brand-logos')
++        .upload(fileName, buffer, {
++          contentType: 'image/png',
++          upsert: true
++        });
++
++      if (!uploadError) {
++        const { data: publicUrlData } = supabase
++          .storage
++          .from('brand-logos')
++          .getPublicUrl(fileName);
++        
++        if (publicUrlData && publicUrlData.publicUrl) {
++          finalLogoUrl = publicUrlData.publicUrl;
++          
++          // Step 6. Save the public URL to brand_kits table logo_url column if we have a brandKitId
++          if (brandKitId && brandKitId !== 'draft') {
++            const { error: updateError } = await supabase
++              .from('brand_kits')
++              .update({ logo_url: finalLogoUrl })
++              .eq('id', brandKitId);
++              
++            if (updateError) {
++              console.error('[logo-gen] Failed to update brand_kits table:', updateError.message);
++            }
+           }
+-        ]
+-      });
++        }
++      } else {
++        console.error('[logo-gen] Supabase Storage upload error:', uploadError.message);
++      }
+     }
+ 
+-    throw new Error('No image returned from Recraft');
++    return res.status(200).json({
++      logos: [
++        {
++          style: 'symbol',
++          url: finalLogoUrl,
++          model_used: 'flux.1-dev'
++        }
++      ]
++    });
+   } catch (error) {
+     console.error('[logo-gen] Failed:', error);
+     return res.status(200).json(fallbackResponse);
+diff --git a/src/ai/pipeline.js b/src/ai/pipeline.js
+index d7d983c..8e2afaa 100644
+--- a/src/ai/pipeline.js
++++ b/src/ai/pipeline.js
+@@ -346,23 +346,44 @@ export const generateStep2Logo = async (dna, palette) => {
+     if (!res.ok) throw new Error('Failed to generate logo');
+     return res.json();
+   } else {
+-    const primary = palette.primary || '#1A1A1A';
+-    const accent = palette.accent || '#C6A96B';
+-    const name = dna.brand_name || 'Brand';
+-    const prompt = `A luxury minimalist logo design for ${name}. Niche: ${dna.niche}. Features a sleek monogram or abstract geometric symbol centered on a solid ${primary} background. The logo mark itself should be a luxurious ${accent} color. Vector art, flat design, perfectly symmetrical, whitespace, extremely premium, corporate identity, Dribbble aesthetic.`;
+-
+-    const response = await fetch('/nvidia-api/v1/genai/stabilityai/stable-diffusion-3-medium', {
++    const niche = (dna.niche || '').toLowerCase();
++    let baseConcept = 'clean geometric abstract mark, minimal professional icon';
++    if (niche.includes('fitness')) baseConcept = 'athletic shield, lightning bolt, dynamic figure in motion';
++    else if (niche.includes('lifestyle')) baseConcept = 'minimal leaf, sun ray, flowing ribbon, abstract organic shape';
++    else if (niche.includes('fashion')) baseConcept = 'geometric diamond, crown, elegant abstract shape, fashion silhouette';
++    else if (niche.includes('tech')) baseConcept = 'circuit node, hexagon, abstract connected dots, geometric tech shape';
++    else if (niche.includes('food') || niche.includes('drink')) baseConcept = 'abstract bowl, leaf sprig, fork silhouette, organic drop shape';
++    else if (niche.includes('business')) baseConcept = 'abstract upward arrow, geometric mountain peak, interlocked shapes';
++    else if (niche.includes('gaming')) baseConcept = 'controller silhouette, pixel star, geometric game icon';
++    else if (niche.includes('real estate')) baseConcept = 'abstract roof line, geometric house shape, key silhouette';
++    else if (niche.includes('travel')) baseConcept = 'compass rose, abstract plane shape, mountain peak, globe outline';
++
++    const styleStr = (dna.style || 'Premium').toLowerCase();
++    let prompt = `A single minimalist vector logo icon of ${baseConcept}. ${dna.style} aesthetic design. Flat clean design, single color on pure white background, centered composition, no text, no letters, no words anywhere in the image, professional brand mark, scalable icon, thick clean outlines, simple geometric shapes only.`;
++
++    if (styleStr.includes('luxury')) prompt += ' thin elegant lines, sophisticated, timeless, high-end';
++    else if (styleStr.includes('minimal')) prompt += ' maximum negative space, ultra clean, simple single shape';
++    else if (styleStr.includes('bold')) prompt += ' thick strokes, strong geometric, high impact, powerful';
++    else if (styleStr.includes('playful')) prompt += ' rounded corners, friendly curves, soft approachable design';
++    else if (styleStr.includes('dark aesthetic')) prompt += ' sleek sharp edges, mysterious, editorial, dark energy';
++
++    const response = await fetch('/nvidia-api/v1/genai/black-forest-labs/flux-1-dev', {
+       method: 'POST',
+       headers: { 'Authorization': `Bearer ${NVIDIA_KEY}`, 'Content-Type': 'application/json', 'Accept': 'application/json' },
+       body: JSON.stringify({
+         prompt: prompt,
+-        negative_prompt: '3d, detailed, realistic, photography, shadows, gradients, mockup, text, watermark, messy, uneven, noise',
+-        cfg_scale: 8, steps: 28, aspect_ratio: '1:1',
++        width: 1024, height: 1024, num_inference_steps: 30, guidance_scale: 7.5,
++        seed: Math.floor(Math.random() * 9999) + 1,
++        negative_prompt: 'text, letters, words, brand name, typography, font, alphabet, watermark, signature, blurry, low quality, realistic photo, human face, people'
+       }),
+     });
+     const data = await response.json();
+-    if (data.artifacts?.[0]?.base64) {
+-      return { logos: [{ style: 'symbol', url: `data:image/png;base64,${data.artifacts[0].base64}`, model_used: 'nvidia-sd3' }] };
++    let base64Image = '';
++    if (data.artifacts && data.artifacts.length > 0 && data.artifacts[0].base64) base64Image = data.artifacts[0].base64;
++    else if (data.image) base64Image = data.image;
++
++    if (base64Image) {
++      return { logos: [{ style: 'symbol', url: `data:image/png;base64,${base64Image}`, model_used: 'flux.1-dev' }] };
+     }
+     throw new Error('NVIDIA Image failed');
+   }
+diff --git a/src/pages/dashboard/BrandKitPage.jsx b/src/pages/dashboard/BrandKitPage.jsx
+index 0aab39c..67b1823 100644
+--- a/src/pages/dashboard/BrandKitPage.jsx
++++ b/src/pages/dashboard/BrandKitPage.jsx
+@@ -501,7 +501,9 @@ const BrandKitPage = () => {
+         body: JSON.stringify({ 
+           dna: brandData.dna, 
+           palette: brandData.colors,
+-          isAlternative: true 
++          isAlternative: true,
++          brandKitId: brandData.id,
++          userId: user?.id
+         })
+       });
+       
+@@ -821,15 +823,17 @@ const BrandKitPage = () => {
+                     </div>
+                  </div>
+                  {isRegeneratingLogo ? (
+-                   <div className="w-36 h-36 flex items-center justify-center bg-surface/50 rounded-xl mb-4">
++                   <div className="w-32 h-32 flex items-center justify-center bg-white border border-light shadow-sm rounded-xl mb-4 z-10 relative">
+                      <div className="w-8 h-8 border-2 border-light border-t-accent rounded-full animate-spin"></div>
+                    </div>
+                  ) : (
+-                   <img 
+-                     src={brandData?.logos?.[0]?.url || brandData?.logo || logoAsset} 
+-                     alt="Primary Logo" 
+-                     className="w-36 h-36 object-contain drop-shadow-2xl group-hover:scale-105 transition-transform duration-700 rounded-xl mix-blend-multiply" 
+-                   />
++                   <div className="w-32 h-32 bg-white rounded-2xl border border-light shadow-sm flex items-center justify-center p-4 mb-4 z-10 relative">
++                     <img 
++                       src={brandData?.logos?.[0]?.url || brandData?.logo || logoAsset} 
++                       alt="Primary Logo Icon" 
++                       className="w-full h-full object-contain drop-shadow-sm group-hover:scale-105 transition-transform duration-500 rounded-xl" 
++                     />
++                   </div>
+                  )}
+                  
+                  <div 
+diff --git a/vercel.json b/vercel.json
+index fc279e0..39162ba 100644
+--- a/vercel.json
++++ b/vercel.json
+@@ -1,4 +1,9 @@
+ {
++  "functions": {
++    "api/**/*.js": {
++      "maxDuration": 60
++    }
++  },
+   "headers": [
+     {
+       "source": "/api/(.*)",

@@ -501,7 +501,9 @@ const BrandKitPage = () => {
         body: JSON.stringify({ 
           dna: brandData.dna, 
           palette: brandData.colors,
-          isAlternative: true 
+          isAlternative: true,
+          brandKitId: brandData.id,
+          userId: user?.id
         })
       });
       
@@ -821,15 +823,17 @@ const BrandKitPage = () => {
                     </div>
                  </div>
                  {isRegeneratingLogo ? (
-                   <div className="w-36 h-36 flex items-center justify-center bg-surface/50 rounded-xl mb-4">
+                   <div className="w-32 h-32 flex items-center justify-center bg-white border border-light shadow-sm rounded-xl mb-4 z-10 relative">
                      <div className="w-8 h-8 border-2 border-light border-t-accent rounded-full animate-spin"></div>
                    </div>
                  ) : (
-                   <img 
-                     src={brandData?.logos?.[0]?.url || brandData?.logo || logoAsset} 
-                     alt="Primary Logo" 
-                     className="w-36 h-36 object-contain drop-shadow-2xl group-hover:scale-105 transition-transform duration-700 rounded-xl mix-blend-multiply" 
-                   />
+                   <div className="w-32 h-32 bg-white rounded-2xl border border-light shadow-sm flex items-center justify-center p-4 mb-4 z-10 relative">
+                     <img 
+                       src={brandData?.logos?.[0]?.url || brandData?.logo || logoAsset} 
+                       alt="Primary Logo Icon" 
+                       className="w-full h-full object-contain drop-shadow-sm group-hover:scale-105 transition-transform duration-500 rounded-xl" 
+                     />
+                   </div>
                  )}
                  
                  <div 

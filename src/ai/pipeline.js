@@ -346,23 +346,44 @@ export const generateStep2Logo = async (dna, palette) => {
     if (!res.ok) throw new Error('Failed to generate logo');
     return res.json();
   } else {
-    const primary = palette.primary || '#1A1A1A';
-    const accent = palette.accent || '#C6A96B';
-    const name = dna.brand_name || 'Brand';
-    const prompt = `A luxury minimalist logo design for ${name}. Niche: ${dna.niche}. Features a sleek monogram or abstract geometric symbol centered on a solid ${primary} background. The logo mark itself should be a luxurious ${accent} color. Vector art, flat design, perfectly symmetrical, whitespace, extremely premium, corporate identity, Dribbble aesthetic.`;
+    const niche = (dna.niche || '').toLowerCase();
+    let baseConcept = 'clean geometric abstract mark, minimal professional icon';
+    if (niche.includes('fitness')) baseConcept = 'athletic shield, lightning bolt, dynamic figure in motion';
+    else if (niche.includes('lifestyle')) baseConcept = 'minimal leaf, sun ray, flowing ribbon, abstract organic shape';
+    else if (niche.includes('fashion')) baseConcept = 'geometric diamond, crown, elegant abstract shape, fashion silhouette';
+    else if (niche.includes('tech')) baseConcept = 'circuit node, hexagon, abstract connected dots, geometric tech shape';
+    else if (niche.includes('food') || niche.includes('drink')) baseConcept = 'abstract bowl, leaf sprig, fork silhouette, organic drop shape';
+    else if (niche.includes('business')) baseConcept = 'abstract upward arrow, geometric mountain peak, interlocked shapes';
+    else if (niche.includes('gaming')) baseConcept = 'controller silhouette, pixel star, geometric game icon';
+    else if (niche.includes('real estate')) baseConcept = 'abstract roof line, geometric house shape, key silhouette';
+    else if (niche.includes('travel')) baseConcept = 'compass rose, abstract plane shape, mountain peak, globe outline';
 
-    const response = await fetch('/nvidia-api/v1/genai/stabilityai/stable-diffusion-3-medium', {
+    const styleStr = (dna.style || 'Premium').toLowerCase();
+    let prompt = `A single minimalist vector logo icon of ${baseConcept}. ${dna.style} aesthetic design. Flat clean design, single color on pure white background, centered composition, no text, no letters, no words anywhere in the image, professional brand mark, scalable icon, thick clean outlines, simple geometric shapes only.`;
+
+    if (styleStr.includes('luxury')) prompt += ' thin elegant lines, sophisticated, timeless, high-end';
+    else if (styleStr.includes('minimal')) prompt += ' maximum negative space, ultra clean, simple single shape';
+    else if (styleStr.includes('bold')) prompt += ' thick strokes, strong geometric, high impact, powerful';
+    else if (styleStr.includes('playful')) prompt += ' rounded corners, friendly curves, soft approachable design';
+    else if (styleStr.includes('dark aesthetic')) prompt += ' sleek sharp edges, mysterious, editorial, dark energy';
+
+    const response = await fetch('/nvidia-api/v1/genai/black-forest-labs/flux-1-dev', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${NVIDIA_KEY}`, 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: JSON.stringify({
         prompt: prompt,
-        negative_prompt: '3d, detailed, realistic, photography, shadows, gradients, mockup, text, watermark, messy, uneven, noise',
-        cfg_scale: 8, steps: 28, aspect_ratio: '1:1',
+        width: 1024, height: 1024, num_inference_steps: 30, guidance_scale: 7.5,
+        seed: Math.floor(Math.random() * 9999) + 1,
+        negative_prompt: 'text, letters, words, brand name, typography, font, alphabet, watermark, signature, blurry, low quality, realistic photo, human face, people'
       }),
     });
     const data = await response.json();
-    if (data.artifacts?.[0]?.base64) {
-      return { logos: [{ style: 'symbol', url: `data:image/png;base64,${data.artifacts[0].base64}`, model_used: 'nvidia-sd3' }] };
+    let base64Image = '';
+    if (data.artifacts && data.artifacts.length > 0 && data.artifacts[0].base64) base64Image = data.artifacts[0].base64;
+    else if (data.image) base64Image = data.image;
+
+    if (base64Image) {
+      return { logos: [{ style: 'symbol', url: `data:image/png;base64,${base64Image}`, model_used: 'flux.1-dev' }] };
     }
     throw new Error('NVIDIA Image failed');
   }

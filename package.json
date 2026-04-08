@@ -13,7 +13,7 @@
     "@capacitor/android": "^8.2.0",
     "@capacitor/cli": "^8.2.0",
     "@capacitor/core": "^8.2.0",
-    "@supabase/supabase-js": "^2.99.2",
+    "@supabase/supabase-js": "^2.102.1",
     "framer-motion": "^12.37.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
