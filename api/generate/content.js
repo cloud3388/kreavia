@@ -13,9 +13,9 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing brand dna context' });
   }
 
-  const groqKey = process.env.VITE_GROQ_API_KEY || process.env.GROQ_API_KEY;
+  const groqKey = process.env.GROQ_API_KEY;
   if (!groqKey) {
-    return res.status(500).json({ error: 'Missing Groq API Key' });
+    return res.status(500).json({ error: 'Missing GROQ_API_KEY in environment' });
   }
 
   const prompt = `You are a viral content strategist and creative director.

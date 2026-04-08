@@ -24,9 +24,9 @@ export default async function handler(req, res) {
     ]
   };
 
-  const nvidiaKey = process.env.VITE_NVIDIA_API_KEY || process.env.NVIDIA_API_KEY;
+  const nvidiaKey = process.env.NVIDIA_API_KEY;
   if (!nvidiaKey) {
-    console.error('[logo-gen] Missing NVIDIA API Key');
+    console.error('[logo-gen] Missing NVIDIA_API_KEY in environment');
     return res.status(200).json(fallbackResponse);
   }
 
@@ -77,9 +77,9 @@ export default async function handler(req, res) {
   }
 
   // 3. Setup Supabase
-  const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-  // Use Service Role Key if available, else Anon Key, since uploading via api might bypass RLS
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  // Use Service Role Key if available (ideal for serverless), else look for Anon keys
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
   const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
   try {

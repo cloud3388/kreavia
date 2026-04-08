@@ -13,11 +13,9 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing prompt' });
   }
 
-  const nvidKey = process.env.VITE_NVIDIA_API_KEY || process.env.NVIDIA_API_KEY;
-  console.log('[custom-logo] Key present:', !!nvidKey, '| Key prefix:', nvidKey?.slice(0, 10));
-
+  const nvidKey = process.env.NVIDIA_API_KEY;
   if (!nvidKey) {
-    return res.status(500).json({ error: 'Missing NVIDIA API Key — set VITE_NVIDIA_API_KEY in .env' });
+    return res.status(500).json({ error: 'Missing NVIDIA_API_KEY in environment' });
   }
 
   const primary = palette?.primary || '#1A1A1A';
