@@ -184,6 +184,11 @@ export default async function handler(req, res) {
     const jsonMatch = content.match(/(\[[\s\S]*\]|\{[\s\S]*\})/);
     const result = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(content);
 
+    // If the AI returned an array (hooks, captions), wrap it to avoid losing the array structure
+    if (Array.isArray(result)) {
+      return res.status(200).json({ data: result, _meta: { fallback_used: usedFallback } });
+    }
+
     return res.status(200).json({
       ...result,
       _meta: { fallback_used: usedFallback }

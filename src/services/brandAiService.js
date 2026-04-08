@@ -82,7 +82,9 @@ export const generateContentIdeas = async (brandData, existingHooks = [], contex
           existingHooks
         })
       });
-      data = await handleResponse(response);
+      const raw = await handleResponse(response);
+      // Proxy wraps arrays as { data: [...], _meta } to preserve array type
+      data = Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);
     } else {
       const avoidHooks = existingHooks && existingHooks.length > 0 
         ? `\nDO NOT use or repeat any of these previously generated hooks:\n${JSON.stringify(existingHooks)}` 
@@ -139,7 +141,9 @@ export const generateCaptions = async (brandData, topic) => {
           tone: info.tone
         })
       });
-      data = await handleResponse(response);
+      const raw = await handleResponse(response);
+      // Proxy wraps arrays as { data: [...], _meta } to preserve array type
+      data = Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);
     } else {
       const prompt = `
         ROLE: Elite social media manager and copywriter.
@@ -172,6 +176,7 @@ export const generateCaptions = async (brandData, topic) => {
     return [];
   }
 };
+
 
 /**
  * Generate relevant hashtags.
