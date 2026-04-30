@@ -1,0 +1,169 @@
+/**
+ * nvidiaService.js
+ * Image Generation via NVIDIA AI API (Stable Diffusion 3 Medium)
+ *
+ * Model: stabilityai/stable-diffusion-3-medium
+ * Docs: https://build.nvidia.com/stabilityai/stable-diffusion-3-medium
+ * API:  https://ai.api.nvidia.com/v1/genai/stabilityai/stable-diffusion-3-medium
+ *
+ * Two modes:
+ *   1. DIRECT  — browser → Vite proxy (/nvidia-api) → NVIDIA  [DEV only]
+ *   2. PROXY   — browser → /api/generate-image (Vercel fn) → NVIDIA  [PRODUCTION]
+ *
+ * Production setup (Vercel dashboard):
+ *   VITE_USE_AI_PROXY=true
+ *   NVIDIA_API_KEY=nvapi-xxxx  (server-side only, no VITE_ prefix)
+ *
+ * Fallback: Returns a placehold.co image URL when no API key is configured.
+ */
+
+const NVIDIA_API_URL = '/nvidia-api/v1/genai/stabilityai/stable-diffusion-3-medium'; // dev only (Vite proxy)
+const PROXY_URL      = '/api/generate-image'; // production (Vercel serverless function)
+
+const apiKey   = import.meta.env.VITE_NVIDIA_API_KEY;
+const useProxy = import.meta.env.VITE_USE_AI_PROXY === 'true';
+
+// Treat missing OR placeholder keys as mock mode
+const isPlaceholder = !apiKey || apiKey.startsWith('nvapi-YOUR') || apiKey === 'nvapi-your_key_here';
+const isMock = isPlaceholder && !useProxy;
+
+console.log(`[NVIDIA] Mode: ${isMock ? 'MOCK (no valid key)' : useProxy ? 'PROXY' : 'DIRECT → Vite proxy → ai.api.nvidia.com'}`);
+
+// ──────────────────────────────────────────
+// Build NVIDIA SD3 request body
+// ──────────────────────────────────────────
+const buildNvidiaInput = (prompt, options = {}) => ({
+  prompt:        prompt,
+  negative_prompt: options.negativePrompt || 'blurry, low quality, watermark, text overlay, ugly, deformed, noisy, pixelated',
+  steps:         options.steps        || 28,
+  cfg_scale:     options.guidanceScale || 7.5,
+  seed:          options.seed         || 0,          // 0 = random
+  // Note: SD3 often prefers aspect_ratio instead of explicit width/height
+  aspect_ratio:  options.aspectRatio  || '1:1',
+});
+
+// ──────────────────────────────────────────
+// Direct NVIDIA API call
+// ──────────────────────────────────────────
+const callNvidiaDirect = async (prompt, options = {}) => {
+  const response = await fetch(NVIDIA_API_URL, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type':  'application/json',
+      'Accept':        'application/json',
+    },
+    body: JSON.stringify(buildNvidiaInput(prompt, options)),
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(`NVIDIA API error: ${err.detail || response.statusText}`);
+  }
+
+  const result = await response.json();
+
+  // NVIDIA returns: { artifacts: [{ base64: "...", finishReason: "SUCCESS" }] }
+  const artifact = result?.artifacts?.[0];
+  if (!artifact?.base64) throw new Error('NVIDIA API returned no image data');
+
+  // Convert base64 to a data URL the browser can display
+  return `data:image/png;base64,${artifact.base64}`;
+};
+
+// ──────────────────────────────────────────
+// Proxy call (production — hides API key)
+// ──────────────────────────────────────────
+const callProxy = async (prompt, options = {}) => {
+  // Sends NVIDIA-format body directly — the Vercel function adds auth and forwards
+  const response = await fetch(PROXY_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(buildNvidiaInput(prompt, options)),
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(`Proxy error: ${err.error || response.statusText}`);
+  }
+  const { imageUrl } = await response.json();
+  return imageUrl;
+};
+
+// ──────────────────────────────────────────
+// Mock fallback placeholder
+// ──────────────────────────────────────────
+const mockImage = (prompt, width = 400, height = 400) => {
+  const words = prompt.split(' ').filter(w => w.length > 3);
+  const label = words[0]?.toUpperCase()?.substring(0, 4) || 'IMG';
+  return `https://placehold.co/${width}x${height}/0F0F0F/C6A96B?text=${label}&font=playfair`;
+};
+
+// ──────────────────────────────────────────
+// Public API
+// ──────────────────────────────────────────
+
+/**
+ * Generate an image from a text prompt using NVIDIA SD3.
+ * @param {string} prompt   - Text prompt for image generation
+ * @param {object} options  - Optional: { width, height, steps, guidanceScale, negativePrompt, seed }
+ * @returns {Promise<string>} - Data URL (base64) or fallback placeholder URL
+ */
+export const generateImage = async (prompt, options = {}) => {
+  console.log(`[NVIDIA] Generating image. Mode: ${isMock ? 'MOCK' : useProxy ? 'PROXY' : 'DIRECT'}`);
+  console.log(`[NVIDIA] Prompt: ${prompt.substring(0, 80)}...`);
+
+  if (isMock) {
+    console.warn('[NVIDIA] No API key found — returning mock image. Set VITE_NVIDIA_API_KEY to enable real generation.');
+    await new Promise(r => setTimeout(r, 1500)); // Simulate latency
+    return mockImage(prompt, options.width || 400, options.height || 400);
+  }
+
+  try {
+    const url = useProxy
+      ? await callProxy(prompt, options)
+      : await callNvidiaDirect(prompt, options);
+
+    if (!url) throw new Error('API returned empty output');
+
+    console.log('[NVIDIA] Image generated successfully.');
+    return url;
+  } catch (err) {
+    console.error(`[NVIDIA] Generation failed: ${err.message}. Falling back to placeholder.`);
+    return mockImage(prompt, options.width || 400, options.height || 400);
+  }
+};
+
+/**
+ * Generate multiple logo variations in parallel.
+ * @param {string[]} prompts - Array of prompts (one per logo style)
+ * @param {object}   options - Generation options
+ * @returns {Promise<string[]>} - Array of image URLs / data URLs
+ */
+export const generateLogoVariations = async (prompts, options = {}) =>
+  Promise.all(prompts.map(p => generateImage(p, { ...options, aspectRatio: '1:1' })));
+
+/**
+ * Generate a social media template background image.
+ * @param {string} prompt  - Creative direction prompt
+ * @param {string} format  - 'square' | 'portrait' | 'landscape' | 'story'
+ * @returns {Promise<string>} - Image URL / data URL
+ */
+export const generateTemplateBackground = async (prompt, format = 'square') => {
+  const aspectRatios = {
+    square:    '1:1',
+    portrait:  '4:5',
+    landscape: '16:9',
+    story:     '9:16',
+  };
+
+  const aspectRatio = aspectRatios[format] || '1:1';
+  return generateImage(prompt, {
+    aspectRatio,
+    steps:         28,
+    guidanceScale: 7,
+    negativePrompt: 'text, watermark, logo, people, faces, blurry, low quality',
+  });
+};
+
+export { buildNvidiaInput, isMock };
